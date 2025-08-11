@@ -200,4 +200,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [![GitHub stars](https://img.shields.io/github/stars/yourusername/markily-telegram-bot.svg?style=social)](https://github.com/yourusername/markily-telegram-bot/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/yourusername/markily-telegram-bot.svg?style=social)](https://github.com/yourusername/markily-telegram-bot/network/members)
 [![GitHub issues](https://img.shields.io/github/issues/yourusername/markily-telegram-bot.svg)](https://github.com/yourusername/markily-telegram-bot/issues)
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Apache License 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
