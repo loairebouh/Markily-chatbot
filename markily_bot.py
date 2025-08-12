@@ -285,9 +285,9 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
         
         status = ""
         if balance > 0:
-            status = f" (owes {balance:,.0f})"
+            status = f" 💰(owes {balance:,.0f})"
         elif balance < 0:
-            status = f" (you owe {abs(balance):,.0f})"
+            status = f" 💸(you owe {abs(balance):,.0f})"
         
         button_text = f"{name}{status}"
         callback_data = f"{action}_{contact_id}"
@@ -547,9 +547,9 @@ async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAU
         
         status = ""
         if balance > 0:
-            status = f" (owes {balance:,.0f})"
+            status = f" 💰(owes {balance:,.0f})"
         elif balance < 0:
-            status = f" (you owe {abs(balance):,.0f})"
+            status = f" 💸(you owe {abs(balance):,.0f})"
         
         button_text = f"🗑️ {name}{status}"
         callback_data = f"delete_{contact_id}"
