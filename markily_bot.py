@@ -5,6 +5,10 @@ from typing import Optional, List, Tuple
 import re
 import os
 from difflib import get_close_matches
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -29,7 +33,10 @@ class MarkilyBot:
     def __init__(self, bot_token: str, db_path: str = "/app/data/markily.db"):
         self.bot_token = bot_token
         self.db_path = db_path
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        # Only create directory if it's not the current directory
+        dir_path = os.path.dirname(db_path)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
         self.init_database()
     
     def init_database(self):
@@ -496,14 +503,14 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message += f"✅ **{name}** - settled\n"
     
     # Add total balance summary
-    total_balance = bot.get_total_balance(query.from_user.id)
+    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(query.from_user.id)
     message += "\n" + "─" * 25 + "\n"
     message += "💯 **TOTAL BALANCE:**\n"
-    if total_balance > 0:
-        message += f"💰 **Net: +{total_balance:,.0f} USD**\n"
+    if net_balance > 0:
+        message += f"💰 **Net: +{net_balance:,.0f} USD**\n"
         message += "_You are owed more than you owe_"
-    elif total_balance < 0:
-        message += f"💸 **Net: {total_balance:,.0f} USD**\n"
+    elif net_balance < 0:
+        message += f"💸 **Net: {net_balance:,.0f} USD**\n"
         message += "_You owe more than you are owed_"
     else:
         message += f"✅ **Net: 0 USD**\n"
@@ -731,7 +738,9 @@ async def main():
         print("💡 Get your token by messaging @BotFather on Telegram")
         return
     
-    bot = MarkilyBot(BOT_TOKEN)
+    # Use local database path when not in Docker
+    db_path = "/app/data/markily.db" if os.path.exists("/app") else "markily.db"
+    bot = MarkilyBot(BOT_TOKEN, db_path)
     
     application = Application.builder().token(BOT_TOKEN).build()
     
