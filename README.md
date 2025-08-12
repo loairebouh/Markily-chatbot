@@ -227,3 +227,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [![GitHub issues](https://img.shields.io/github/issues/yourusername/markily-telegram-bot.svg)](https://github.com/yourusername/markily-telegram-bot/issues)
 [![Apache License 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
+## 🙏 Acknowledgments
+
+- Built with [python-telegram-bot](https://python-telegram-bot.org/)
+- Inspired by the need to track informal loans between friends
+- Thanks to the open-source community for tools and libraries
+- **Special thanks to Abdallah Mehiz** — for his invaluable support and for inspiring the idea to make this app as a Telegram bot
+
+
