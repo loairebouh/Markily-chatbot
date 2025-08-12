@@ -50,12 +50,23 @@ git clone <repo> && cd markily-telegram-chatbot
 docker compose up -d --build
 ```
 
-## � License
+## 📄 License
 
-MIT License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with [python-telegram-bot](https://python-telegram-bot.org/)
+- Inspired by the need to track informal loans between friends
+- Thanks to the open-source community for tools and libraries
+
+## 💬 Support
+
+- **Issues**: Use GitHub Issues for bugs and feature requests
+- **Discussions**: Use GitHub Discussions for questions and ideas
+- **Telegram**: Join our support group [@MarkilySupport](https://t.me/MarkilySupport)
 
 ---
 
-**Made with ❤️ for tracking money between friends**
-
+**Made with ❤️ for people who lend money to friends and actually want to keep track of it.**
 
