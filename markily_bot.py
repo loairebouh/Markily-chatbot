@@ -240,8 +240,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("✅ Clear Balance", callback_data="action_clear")
         ],
         [
-            InlineKeyboardButton("🗑️ Delete Contact", callback_data="action_delete_contact"),
-            InlineKeyboardButton("💯 Total Balance", callback_data="action_total_balance")
+            InlineKeyboardButton("🗑️ Delete Contact", callback_data="action_delete_contact")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -496,36 +495,19 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             message += f"✅ **{name}** - settled\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
-
-async def show_total_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(query.from_user.id)
-    
-    if total_owed_to_me == 0 and total_i_owe == 0:
-        message = "💯 **Total Balance Summary**\n\n✅ You have no outstanding balances!\nAll transactions are settled."
+    # Add total balance summary
+    total_balance = bot.get_total_balance(query.from_user.id)
+    message += "\n" + "─" * 25 + "\n"
+    message += "💯 **TOTAL BALANCE:**\n"
+    if total_balance > 0:
+        message += f"💰 **Net: +{total_balance:,.0f} USD**\n"
+        message += "_You are owed more than you owe_"
+    elif total_balance < 0:
+        message += f"💸 **Net: {total_balance:,.0f} USD**\n"
+        message += "_You owe more than you are owed_"
     else:
-        message = "💯 **Total Balance Summary**\n\n"
-        
-        if total_owed_to_me > 0:
-            message += f"💰 **Total owed to you:** {total_owed_to_me:,.0f} DZD\n"
-        
-        if total_i_owe > 0:
-            message += f"💸 **Total you owe:** {total_i_owe:,.0f} DZD\n"
-        
-        message += f"\n"
-        
-        if net_balance > 0:
-            message += f"📈 **Net Balance:** +{net_balance:,.0f} DZD\n(You are owed more than you owe)"
-        elif net_balance < 0:
-            message += f"📉 **Net Balance:** {net_balance:,.0f} DZD\n(You owe more than you are owed)"
-        else:
-            message += f"⚖️ **Net Balance:** 0 DZD\n(Perfectly balanced!)"
+        message += f"✅ **Net: 0 USD**\n"
+        message += "_All balances are settled_"
     
     keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -685,10 +667,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == "action_balances":
         await show_all_balances(update, context)
-        return ConversationHandler.END
-    
-    elif data == "action_total_balance":
-        await show_total_balance(update, context)
         return ConversationHandler.END
     
     elif data == "action_delete_contact":
