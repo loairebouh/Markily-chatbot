@@ -59,6 +59,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with [python-telegram-bot](https://python-telegram-bot.org/)
 - Inspired by the need to track informal loans between friends
 - Thanks to the open-source community for tools and libraries
+- **Special thanks to Abdallah Mehiz** — for his invaluable support and for inspiring the idea to make this app as a Telegram bot
 
 ## 💬 Support
 
