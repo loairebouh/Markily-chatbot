@@ -5,21 +5,25 @@ A smart Telegram bot that helps you track money you lend to and borrow from frie
 ## ✨ Features
 
 ### 💰 Smart Balance Tracking
+
 - **Net balance calculation** - automatically calculates who owes whom
 - **Multi-currency support** - DZD, USD, EUR with smart defaults
 - **Real-time updates** - see updated balances after each transaction
 
-### 👥 Contact Management  
+### 👥 Contact Management
+
 - **Fuzzy search** - find contacts with partial names (e.g., "ami" finds "Amine")
 - **Auto-add contacts** - suggests adding new contacts during transactions
 - **Contact overview** - see all contacts with their current balance status
 
 ### 📊 Transaction History
+
 - **Complete audit trail** - every transaction with timestamps and notes
 - **Rich formatting** - clear visual distinction between lending and borrowing
 - **Detailed notes** - remember why money was exchanged
 
 ### 🔄 Easy Balance Clearing
+
 - **Smart clearing** - automatically determines payment direction
 - **Partial payments** - clear balances partially or completely
 - **Settlement tracking** - know when you're even with someone
@@ -27,36 +31,47 @@ A smart Telegram bot that helps you track money you lend to and borrow from frie
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.7+
 - Telegram account
 - Bot token from [@BotFather](https://t.me/botfather)
 
 ### Installation
 
-1. **Clone the repository**
+1. **Create Virtual Environment**
+
    ```bash
-   git clone https://github.com/yourusername/markily-telegram-bot.git
-   cd markily-telegram-bot
+   python3 -m venv markily_env
+   source markily_env/bin/activate  # On Windows: markily_env\Scripts\activate
    ```
 
 2. **Install dependencies**
+
    ```bash
-   pip install python-telegram-bot
+   pip install -r requirements.txt
    ```
 
 3. **Get your bot token**
+
    - Message [@BotFather](https://t.me/botfather) on Telegram
    - Use `/newbot` command and follow instructions
    - Copy your bot token
 
 4. **Configure the bot**
+
    ```bash
-   # Replace YOUR_BOT_TOKEN_HERE in markily_bot.py with your actual token
-   BOT_TOKEN = "1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ"
+   # Create .env file with your bot token
+   echo "BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ" > .env
    ```
 
 5. **Run the bot**
+
    ```bash
+   # Option 1: Use the startup script
+   ./start_bot.sh
+
+   # Option 2: Run manually
+   source markily_env/bin/activate
    python markily_bot.py
    ```
 
@@ -86,26 +101,28 @@ A smart Telegram bot that helps you track money you lend to and borrow from frie
 
 ## 📋 Commands Reference
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/start` | Welcome message and overview | `/start` |
-| `/help` | Detailed command guide | `/help` |
-| `/addcontact` | Add new contact | `/addcontact John Doe +1234567890` |
-| `/contacts` | List all contacts with balances | `/contacts` |
-| `/lend` | Record money you lent | `/lend john 100 USD dinner` |
-| `/borrow` | Record money you borrowed | `/borrow sara 50 EUR gas` |
-| `/balance` | Check balance with someone | `/balance john` |
-| `/history` | View transaction history | `/history sara` |
-| `/clear` | Clear/reduce balance | `/clear john 100 USD payment` |
+| Command       | Description                     | Example                            |
+| ------------- | ------------------------------- | ---------------------------------- |
+| `/start`      | Welcome message and overview    | `/start`                           |
+| `/help`       | Detailed command guide          | `/help`                            |
+| `/addcontact` | Add new contact                 | `/addcontact John Doe +1234567890` |
+| `/contacts`   | List all contacts with balances | `/contacts`                        |
+| `/lend`       | Record money you lent           | `/lend john 100 USD dinner`        |
+| `/borrow`     | Record money you borrowed       | `/borrow sara 50 EUR gas`          |
+| `/balance`    | Check balance with someone      | `/balance john`                    |
+| `/history`    | View transaction history        | `/history sara`                    |
+| `/clear`      | Clear/reduce balance            | `/clear john 100 USD payment`      |
 
 ## 🏗️ Architecture
 
 ### Database Schema
+
 - **Users**: Telegram user information
 - **Contacts**: Your personal contacts with optional phone numbers
 - **Transactions**: All lending/borrowing records with notes and timestamps
 
 ### Key Features
+
 - **SQLite database** - lightweight, no setup required
 - **Fuzzy search** - find contacts even with typos
 - **Net balance calculation** - smart math handles complex scenarios
@@ -115,12 +132,14 @@ A smart Telegram bot that helps you track money you lend to and borrow from frie
 ## 🌟 Use Cases
 
 ### Personal Finance
+
 - Track money lent to friends and family
 - Remember informal loans and IOUs
 - Keep receipts for group expenses
 - Manage small business cash flows
 
 ### Group Activities
+
 - Split restaurant bills
 - Share vacation expenses
 - Track group purchases
@@ -138,16 +157,19 @@ A smart Telegram bot that helps you track money you lend to and borrow from frie
 We welcome contributions! Here's how you can help:
 
 ### 🐛 Bug Reports
+
 - Use GitHub Issues to report bugs
 - Include steps to reproduce
 - Mention your Python and OS version
 
 ### 💡 Feature Requests
+
 - Suggest new features via GitHub Issues
 - Explain your use case
 - Consider backward compatibility
 
 ### 🔧 Development Setup
+
 ```bash
 git clone https://github.com/yourusername/markily-telegram-bot.git
 cd markily-telegram-bot
@@ -156,6 +178,7 @@ pip install -r requirements.txt
 ```
 
 ### 📝 Pull Request Guidelines
+
 - Fork the repository
 - Create a feature branch
 - Write tests for new features
@@ -165,13 +188,15 @@ pip install -r requirements.txt
 ## 📊 Roadmap
 
 ### Version 2.0
+
 - [ ] Multi-user support (family/group accounts)
 - [ ] Export transactions to CSV/Excel
 - [ ] Recurring transaction reminders
 - [ ] Currency conversion rates
 - [ ] Photo receipts with OCR
 
-### Version 2.1  
+### Version 2.1
+
 - [ ] Web dashboard interface
 - [ ] Integration with banking APIs
 - [ ] Advanced reporting and analytics

@@ -568,9 +568,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     global bot
     
-    BOT_TOKEN = os.getenv('BOT_TOKEN')
+    BOT_TOKEN = os.getenv('BOT_TOKEN', '8315987255:AAHsBw4_8UtkfF79nRZKnT5lNMzNxOWvk9s')
     
-    if not BOT_TOKEN:
+    if BOT_TOKEN == "8315987255:AAHsBw4_8UtkfF79nRZKnT5lNMzNxOWvk9s" or not BOT_TOKEN:
         print("❌ Please set BOT_TOKEN environment variable with your actual token from @BotFather")
         print("💡 Get your token by messaging @BotFather on Telegram")
         return

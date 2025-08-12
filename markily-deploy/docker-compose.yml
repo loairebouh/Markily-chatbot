@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  markily-bot:
+    build: .
+    container_name: markily-telegram-bot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - markily-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import sqlite3; conn = sqlite3.connect('/app/data/markily.db'); conn.close()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  markily-network:
+    driver: bridge
+
+volumes:
+  markily-data:
+    driver: local
