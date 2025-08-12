@@ -19,7 +19,6 @@ coverage.xml
 *.log
 .venv
 markily_env/
-.env
 .vscode
 .idea
 *.db
