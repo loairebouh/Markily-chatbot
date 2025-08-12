@@ -267,7 +267,7 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
     if not contacts:
         keyboard = [
             [InlineKeyboardButton("👤 Add Contact First", callback_data="action_add_contact")],
-            [InlineKeyboardButton("� Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton("✳️ Back to Menu", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -284,9 +284,9 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
         
         status = ""
         if balance > 0:
-            status = f" 💰(owes {balance:,.0f})"
+            status = f" ↗️(owes {balance:,.0f})"
         elif balance < 0:
-            status = f" 💸(you owe {abs(balance):,.0f})"
+            status = f" ↙️(you owe {abs(balance):,.0f})"
         
         button_text = f"{name}{status}"
         callback_data = f"{action}_{contact_id}"
@@ -296,8 +296,8 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     action_text = {
-        "lend": "💸 Who did you lend money to?",
-        "borrow": "💰 Who did you borrow money from?",
+        "lend": "↗️ Who did you lend money to?",
+        "borrow": "↙️ Who did you borrow money from?",
         "clear": "✅ Clear balance with whom?",
         "history": "📜 View history with whom?"
     }
@@ -329,8 +329,8 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
         return ConversationHandler.END
     
     action_text = {
-        "lend": f"💸 How much did you lend to **{contact[1]}**?",
-        "borrow": f"💰 How much did you borrow from **{contact[1]}**?",
+        "lend": f"↗️ How much did you lend to **{contact[1]}**?",
+        "borrow": f"↙️ How much did you borrow from **{contact[1]}**?",
         "clear": f"✅ How much did you pay to **{contact[1]}**?"
     }
     
@@ -359,8 +359,8 @@ async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     contact_name = context.user_data['contact_name']
     
     action_text = {
-        "lend": f"💸 You lent **{amount:,.0f} DZD** to **{contact_name}**",
-        "borrow": f"💰 You borrowed **{amount:,.0f} DZD** from **{contact_name}**",
+        "lend": f"↗️ You lent **{amount:,.0f} DZD** to **{contact_name}**",
+        "borrow": f"↙️ You borrowed **{amount:,.0f} DZD** from **{contact_name}**",
         "clear": f"✅ You paid **{amount:,.0f} DZD** to **{contact_name}**"
     }
     
@@ -409,7 +409,7 @@ async def save_transaction_and_finish(update: Update, context: ContextTypes.DEFA
     
     note_text = f" ({note})" if note else ""
     
-    action_emoji = {"lend": "💸", "borrow": "💰", "clear": "✅"}
+    action_emoji = {"lend": "↗️", "borrow": "↙️", "clear": "✅"}
     action_verb = {"lend": "lent to", "borrow": "borrowed from", "clear": "paid to"}
     
     message = f"{action_emoji.get(action, '')} **Transaction recorded!**\n\n"
@@ -446,10 +446,10 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
             date = datetime.fromisoformat(created_at).strftime("%m/%d")
             
             if transaction_type == 'lend':
-                emoji = "💸"
+                emoji = "↗️"
                 action = "You lent"
             else:
-                emoji = "💰" 
+                emoji = "↙️" 
                 action = "You borrowed"
             
             note_text = f" - {note}" if note else ""
@@ -509,7 +509,7 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message += f"💰 **Net: +{net_balance:,.0f} USD**\n"
         message += "_You are owed more than you owe_"
     elif net_balance < 0:
-        message += f"💸 **Net: {net_balance:,.0f} USD**\n"
+        message += f"❌ **Net: {net_balance:,.0f} USD**\n"
         message += "_You owe more than you are owed_"
     else:
         message += f"✅ **Net: 0 USD**\n"
