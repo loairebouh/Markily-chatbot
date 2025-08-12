@@ -495,9 +495,9 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
         balance, currency = bot.get_balance(query.from_user.id, contact_id)
         
         if balance > 0:
-            message += f"💰 **{name}** owes you **{balance:,.0f} {currency}**\n"
+            message += f"↗️ **{name}** owes you **{balance:,.0f} {currency}**\n"
         elif balance < 0:
-            message += f"💸 You owe **{name}** **{abs(balance):,.0f} {currency}**\n"
+            message += f"↙️ You owe **{name}** **{abs(balance):,.0f} {currency}**\n"
         else:
             message += f"✅ **{name}** - settled\n"
     
