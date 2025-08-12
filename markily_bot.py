@@ -117,6 +117,18 @@ class MarkilyBot:
         conn.close()
         return contact_id
     
+    def delete_contact(self, user_id: int, contact_id: int) -> bool:
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM transactions WHERE user_id = ? AND contact_id = ?', (user_id, contact_id))
+        cursor.execute('DELETE FROM contacts WHERE user_id = ? AND id = ?', (user_id, contact_id))
+        
+        deleted = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return deleted
+    
     def add_transaction(self, user_id: int, contact_id: int, amount: float, 
                        currency: str, transaction_type: str, note: str = None) -> int:
         conn = sqlite3.connect(self.db_path)
@@ -156,6 +168,33 @@ class MarkilyBot:
                 balance -= amount
         
         return balance, currency
+    
+    def get_total_balance(self, user_id: int) -> Tuple[float, float, float]:
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT c.id FROM contacts c WHERE c.user_id = ?
+        ''', (user_id,))
+        
+        contacts = cursor.fetchall()
+        conn.close()
+        
+        total_owed_to_me = 0.0
+        total_i_owe = 0.0
+        
+        for contact in contacts:
+            contact_id = contact[0]
+            balance, _ = self.get_balance(user_id, contact_id)
+            
+            if balance > 0:
+                total_owed_to_me += balance
+            elif balance < 0:
+                total_i_owe += abs(balance)
+        
+        net_balance = total_owed_to_me - total_i_owe
+        
+        return total_owed_to_me, total_i_owe, net_balance
     
     def get_transaction_history(self, user_id: int, contact_id: int) -> List[Tuple]:
         conn = sqlite3.connect(self.db_path)
@@ -199,6 +238,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [
             InlineKeyboardButton("📜 Transaction History", callback_data="action_history"),
             InlineKeyboardButton("✅ Clear Balance", callback_data="action_clear")
+        ],
+        [
+            InlineKeyboardButton("🗑️ Delete Contact", callback_data="action_delete_contact"),
+            InlineKeyboardButton("💯 Total Balance", callback_data="action_total_balance")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -458,6 +501,140 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
 
+async def show_total_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(query.from_user.id)
+    
+    if total_owed_to_me == 0 and total_i_owe == 0:
+        message = "💯 **Total Balance Summary**\n\n✅ You have no outstanding balances!\nAll transactions are settled."
+    else:
+        message = "💯 **Total Balance Summary**\n\n"
+        
+        if total_owed_to_me > 0:
+            message += f"💰 **Total owed to you:** {total_owed_to_me:,.0f} DZD\n"
+        
+        if total_i_owe > 0:
+            message += f"💸 **Total you owe:** {total_i_owe:,.0f} DZD\n"
+        
+        message += f"\n"
+        
+        if net_balance > 0:
+            message += f"📈 **Net Balance:** +{net_balance:,.0f} DZD\n(You are owed more than you owe)"
+        elif net_balance < 0:
+            message += f"📉 **Net Balance:** {net_balance:,.0f} DZD\n(You owe more than you are owed)"
+        else:
+            message += f"⚖️ **Net Balance:** 0 DZD\n(Perfectly balanced!)"
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    contacts = bot.get_user_contacts(query.from_user.id)
+    
+    if not contacts:
+        keyboard = [
+            [InlineKeyboardButton("👤 Add Contact First", callback_data="action_add_contact")],
+            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            "📭 You don't have any contacts to delete!",
+            reply_markup=reply_markup
+        )
+        return
+    
+    keyboard = []
+    for contact in contacts:
+        contact_id, name, phone, telegram_username = contact
+        balance, currency = bot.get_balance(query.from_user.id, contact_id)
+        
+        status = ""
+        if balance > 0:
+            status = f" (owes {balance:,.0f})"
+        elif balance < 0:
+            status = f" (you owe {abs(balance):,.0f})"
+        
+        button_text = f"🗑️ {name}{status}"
+        callback_data = f"delete_{contact_id}"
+        keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
+    
+    keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "🗑️ **Delete Contact**\n\n⚠️ Choose a contact to delete.\nThis will also delete all transaction history!",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+async def confirm_delete_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    contact_id = int(query.data.split('_')[1])
+    
+    contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == contact_id), None)
+    if not contact:
+        await query.edit_message_text("❌ Contact not found!")
+        return
+    
+    contact_name = contact[1]
+    balance, currency = bot.get_balance(query.from_user.id, contact_id)
+    
+    balance_warning = ""
+    if balance != 0:
+        if balance > 0:
+            balance_warning = f"\n⚠️ **Warning:** {contact_name} owes you {balance:,.0f} {currency}!"
+        else:
+            balance_warning = f"\n⚠️ **Warning:** You owe {contact_name} {abs(balance):,.0f} {currency}!"
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("❌ Cancel", callback_data="action_delete_contact"),
+            InlineKeyboardButton("🗑️ Delete", callback_data=f"confirm_delete_{contact_id}")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"🗑️ **Delete Contact**\n\nAre you sure you want to delete **{contact_name}**?{balance_warning}\n\nThis action cannot be undone!",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+async def delete_contact_confirmed(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    contact_id = int(query.data.split('_')[2])
+    
+    contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == contact_id), None)
+    if not contact:
+        await query.edit_message_text("❌ Contact not found!")
+        return
+    
+    contact_name = contact[1]
+    
+    success = bot.delete_contact(query.from_user.id, contact_id)
+    
+    if success:
+        message = f"✅ **{contact_name}** has been deleted!\n\nAll transaction history has been removed."
+    else:
+        message = f"❌ Failed to delete **{contact_name}**."
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
 async def start_add_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -508,6 +685,22 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == "action_balances":
         await show_all_balances(update, context)
+        return ConversationHandler.END
+    
+    elif data == "action_total_balance":
+        await show_total_balance(update, context)
+        return ConversationHandler.END
+    
+    elif data == "action_delete_contact":
+        await show_contacts_for_deletion(update, context)
+        return ConversationHandler.END
+    
+    elif data.startswith("delete_") and not data.startswith("confirm_delete_"):
+        await confirm_delete_contact(update, context)
+        return ConversationHandler.END
+    
+    elif data.startswith("confirm_delete_"):
+        await delete_contact_confirmed(update, context)
         return ConversationHandler.END
     
     elif data == "action_lend":
