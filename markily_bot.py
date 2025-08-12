@@ -7,7 +7,6 @@ import os
 from difflib import get_close_matches
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
 load_dotenv()
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
