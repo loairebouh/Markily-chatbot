@@ -28,6 +28,156 @@ logger = logging.getLogger(__name__)
 
 WAITING_FOR_CONTACT_NAME, WAITING_FOR_AMOUNT, WAITING_FOR_NOTE = range(3)
 
+# Language translations
+TRANSLATIONS = {
+    'en': {
+        'welcome': "🏦 **Welcome {}!**\n\nChoose what you want to do:",
+        'lent_money': "💸 I Lent Money",
+        'borrowed_money': "💰 I Borrowed Money",
+        'add_contact': "👤 Add Contact",
+        'view_balances': "📊 View Balances",
+        'transaction_history': "📜 Transaction History",
+        'clear_balance': "✅ Clear Balance",
+        'delete_contact': "🗑️ Delete Contact",
+        'language': "🌐 Language",
+        'back_to_menu': "🔙 Back to Menu",
+        'cancel': "❌ Cancel",
+        'no_contacts': "📭 You don't have any contacts yet!\nAdd a contact first to continue.",
+        'no_contacts_delete': "📭 You don't have any contacts to delete!",
+        'add_contact_first': "👤 Add Contact First",
+        'who_lent_to': "↗️ Who did you lend money to?",
+        'who_borrowed_from': "↙️ Who did you borrow money from?",
+        'clear_balance_with': "✅ Clear balance with whom?",
+        'view_history_with': "📜 View history with whom?",
+        'contact_not_found': "❌ Contact not found!",
+        'how_much_lent': "↗️ How much did you lend to **{}**?",
+        'how_much_borrowed': "↙️ How much did you borrow from **{}**?",
+        'how_much_paid': "✅ How much did you pay to **{}**?",
+        'enter_amount_hint': "\n\n💡 Send just the number (e.g., 1000)",
+        'invalid_amount': "❌ Please enter a valid positive number (e.g., 1000)",
+        'you_lent': "↗️ You lent **{:,.0f} DZD** to **{}**",
+        'you_borrowed': "↙️ You borrowed **{:,.0f} DZD** from **{}**",
+        'you_paid': "✅ You paid **{:,.0f} DZD** to **{}**",
+        'add_note_question': "\n\nDo you want to add a note?",
+        'save_no_note': "💾 Save (No Note)",
+        'add_note': "📝 Add Note",
+        'transaction_recorded': "**Transaction recorded!**",
+        'lent_to': "lent to",
+        'borrowed_from': "borrowed from",
+        'paid_to': "paid to",
+        'settled': "🎉 You and **{}** are now settled!",
+        'owes_you': "💰 **{}** owes you **{:,.0f} {}**",
+        'you_owe': "💰 You owe **{}** **{:,.0f} {}**",
+        'no_transactions': "📭 No transactions found with **{}**",
+        'history_with': "📜 **History with {}:**",
+        'you_lent_history': "You lent",
+        'you_borrowed_history': "You borrowed",
+        'current_balance': "**Current Balance:**",
+        'settled_balance': "✅ Settled",
+        'your_balances': "📊 **Your Balances:**",
+        'total_balance': "💯 **TOTAL BALANCE:**",
+        'net_positive': "💰 **Net: +{:,.0f} DZD**\n_You are owed more than you owe_",
+        'net_negative': "❌ **Net: {:,.0f} DZD**\n_You owe more than you are owed_",
+        'net_zero': "✅ **Net: 0 DZD**\n_All balances are settled_",
+        'delete_contact_title': "🗑️ **Delete Contact**\n\n⚠️ Choose a contact to delete.\nThis will also delete all transaction history!",
+        'delete_confirmation': "🗑️ **Delete Contact**\n\nAre you sure you want to delete **{}**?{}\n\nThis action cannot be undone!",
+        'warning_owes_you': "\n⚠️ **Warning:** {} owes you {:,.0f} {}!",
+        'warning_you_owe': "\n⚠️ **Warning:** You owe {} {:,.0f} {}!",
+        'delete_success': "✅ **{}** has been deleted!\n\nAll transaction history has been removed.",
+        'delete_failed': "❌ Failed to delete **{}**.",
+        'add_new_contact': "👤 **Add New Contact**\n\nSend me the contact's name:\n\n💡 Example: Ahmed Benali",
+        'name_too_short': "❌ Name must be at least 2 characters long",
+        'contact_added': "✅ **{}** added to your contacts!",
+        'send_note': "📝 Send me a note for this transaction:\n\n💡 Example: lunch money, taxi fare, etc.",
+        'choose_language': "🌐 **Choose Language / اختر اللغة**",
+        'owes_short': "(owes {:,.0f})",
+        'you_owe_short': "(you owe {:,.0f})"
+    },
+    'ar': {
+        'welcome': "🏦 **مرحباً {}!**\n\nاختر ما تريد فعله:",
+        'lent_money': "💸 أقرضت مالاً",
+        'borrowed_money': "💰 استدنت مالاً", 
+        'add_contact': "👤 إضافة جهة اتصال",
+        'view_balances': "📊 عرض الأرصدة",
+        'transaction_history': "📜 تاريخ المعاملات",
+        'clear_balance': "✅ تسوية الرصيد",
+        'delete_contact': "🗑️ حذف جهة اتصال",
+        'language': "🌐 اللغة",
+        'back_to_menu': "🔙 العودة للقائمة",
+        'cancel': "❌ إلغاء",
+        'no_contacts': "📭 ليس لديك أي جهات اتصال بعد!\nأضف جهة اتصال أولاً للمتابعة.",
+        'no_contacts_delete': "📭 ليس لديك أي جهات اتصال لحذفها!",
+        'add_contact_first': "👤 أضف جهة اتصال أولاً",
+        'who_lent_to': "↗️ لمن أقرضت المال؟",
+        'who_borrowed_from': "↙️ ممن استدنت المال؟",
+        'clear_balance_with': "✅ تسوية الرصيد مع من؟",
+        'view_history_with': "📜 عرض التاريخ مع من؟",
+        'contact_not_found': "❌ جهة الاتصال غير موجودة!",
+        'how_much_lent': "↗️ كم أقرضت لـ **{}**؟",
+        'how_much_borrowed': "↙️ كم استدنت من **{}**؟",
+        'how_much_paid': "✅ كم دفعت لـ **{}**؟",
+        'enter_amount_hint': "\n\n💡 أرسل الرقم فقط (مثال: 1000)",
+        'invalid_amount': "❌ يرجى إدخال رقم صحيح موجب (مثال: 1000)",
+        'you_lent': "↗️ أقرضت **{:,.0f} دج** لـ **{}**",
+        'you_borrowed': "↙️ استدنت **{:,.0f} دج** من **{}**",
+        'you_paid': "✅ دفعت **{:,.0f} دج** لـ **{}**",
+        'add_note_question': "\n\nهل تريد إضافة ملاحظة؟",
+        'save_no_note': "💾 حفظ (بدون ملاحظة)",
+        'add_note': "📝 إضافة ملاحظة",
+        'transaction_recorded': "**تم تسجيل المعاملة!**",
+        'lent_to': "أقرضت لـ",
+        'borrowed_from': "استدنت من",
+        'paid_to': "دفعت لـ",
+        'settled': "🎉 أنت و **{}** متصالحان الآن!",
+        'owes_you': "💰 **{}** مدين لك بـ **{:,.0f} {}**",
+        'you_owe': "💰 أنت مدين لـ **{}** بـ **{:,.0f} {}**",
+        'no_transactions': "📭 لم توجد معاملات مع **{}**",
+        'history_with': "📜 **التاريخ مع {}:**",
+        'you_lent_history': "أقرضت",
+        'you_borrowed_history': "استدنت",
+        'current_balance': "**الرصيد الحالي:**",
+        'settled_balance': "✅ متصالح",
+        'your_balances': "📊 **أرصدتك:**",
+        'total_balance': "💯 **الرصيد الإجمالي:**",
+        'net_positive': "💰 **الصافي: +{:,.0f} دج**\n_المطلوب لك أكثر مما عليك_",
+        'net_negative': "❌ **الصافي: {:,.0f} دج**\n_المطلوب عليك أكثر مما لك_",
+        'net_zero': "✅ **الصافي: 0 دج**\n_جميع الأرصدة متصالحة_",
+        'delete_contact_title': "🗑️ **حذف جهة اتصال**\n\n⚠️ اختر جهة اتصال للحذف.\nسيؤدي هذا لحذف تاريخ المعاملات أيضاً!",
+        'delete_confirmation': "🗑️ **حذف جهة اتصال**\n\nهل أنت متأكد من حذف **{}**؟{}\n\nلا يمكن التراجع عن هذا الإجراء!",
+        'warning_owes_you': "\n⚠️ **تحذير:** {} مدين لك بـ {:,.0f} {}!",
+        'warning_you_owe': "\n⚠️ **تحذير:** أنت مدين لـ {} بـ {:,.0f} {}!",
+        'delete_success': "✅ تم حذف **{}**!\n\nتم حذف جميع تاريخ المعاملات.",
+        'delete_failed': "❌ فشل في حذف **{}**.",
+        'add_new_contact': "👤 **إضافة جهة اتصال جديدة**\n\nأرسل لي اسم جهة الاتصال:\n\n💡 مثال: أحمد بن علي",
+        'name_too_short': "❌ الاسم يجب أن يكون حرفين على الأقل",
+        'contact_added': "✅ تمت إضافة **{}** لجهات اتصالك!",
+        'send_note': "📝 أرسل لي ملاحظة لهذه المعاملة:\n\n💡 مثال: فلوس غداء، أجرة تاكسي، إلخ",
+        'choose_language': "🌐 **Choose Language / اختر اللغة**",
+        'owes_short': "(مدين {:,.0f})",
+        'you_owe_short': "(مدين عليك {:,.0f})"
+    }
+}
+
+def get_user_language(user_id: int) -> str:
+    """Get user's preferred language, default to English"""
+    # For now, we'll store in memory. In production, store in database
+    return user_languages.get(user_id, 'en')
+
+def set_user_language(user_id: int, language: str):
+    """Set user's preferred language"""
+    user_languages[user_id] = language
+
+def t(user_id: int, key: str, *args) -> str:
+    """Translate text for user"""
+    lang = get_user_language(user_id)
+    text = TRANSLATIONS[lang].get(key, TRANSLATIONS['en'][key])
+    if args:
+        return text.format(*args)
+    return text
+
+# Global dictionary to store user language preferences
+user_languages = {}
+
 class MarkilyBot:
     def __init__(self, bot_token: str, db_path: str = "/app/data/markily.db"):
         self.bot_token = bot_token
@@ -234,29 +384,60 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [
-            InlineKeyboardButton("💸 I Lent Money", callback_data="action_lend"),
-            InlineKeyboardButton("💰 I Borrowed Money", callback_data="action_borrow")
+            InlineKeyboardButton(t(user.id, 'lent_money'), callback_data="action_lend"),
+            InlineKeyboardButton(t(user.id, 'borrowed_money'), callback_data="action_borrow")
         ],
         [
-            InlineKeyboardButton("👤 Add Contact", callback_data="action_add_contact"),
-            InlineKeyboardButton("📊 View Balances", callback_data="action_balances")
+            InlineKeyboardButton(t(user.id, 'add_contact'), callback_data="action_add_contact"),
+            InlineKeyboardButton(t(user.id, 'view_balances'), callback_data="action_balances")
         ],
         [
-            InlineKeyboardButton("📜 Transaction History", callback_data="action_history"),
-            InlineKeyboardButton("✅ Clear Balance", callback_data="action_clear")
+            InlineKeyboardButton(t(user.id, 'transaction_history'), callback_data="action_history"),
+            InlineKeyboardButton(t(user.id, 'clear_balance'), callback_data="action_clear")
         ],
         [
-            InlineKeyboardButton("🗑️ Delete Contact", callback_data="action_delete_contact")
+            InlineKeyboardButton(t(user.id, 'delete_contact'), callback_data="action_delete_contact"),
+            InlineKeyboardButton(t(user.id, 'language'), callback_data="action_language")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    welcome_text = f"🏦 **Welcome {user.first_name}!**\n\nChoose what you want to do:"
+    welcome_text = t(user.id, 'welcome', user.first_name)
     
     if update.message:
         await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
     else:
         await update.callback_query.edit_message_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+
+async def show_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🇺🇸 English", callback_data="set_language_en"),
+            InlineKeyboardButton("🇩🇿 العربية", callback_data="set_language_ar")
+        ],
+        [
+            InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        t(query.from_user.id, 'choose_language'),
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
+    )
+
+async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    language = query.data.split('_')[2]  # set_language_en -> en
+    set_user_language(query.from_user.id, language)
+    
+    await start(update, context)
 
 async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT_TYPE, action: str):
     query = update.callback_query
@@ -266,13 +447,13 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
     
     if not contacts:
         keyboard = [
-            [InlineKeyboardButton("👤 Add Contact First", callback_data="action_add_contact")],
-            [InlineKeyboardButton("✳️ Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton(t(query.from_user.id, 'add_contact_first'), callback_data="action_add_contact")],
+            [InlineKeyboardButton(t(query.from_user.id, 'back_to_menu'), callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            "📭 You don't have any contacts yet!\nAdd a contact first to continue.",
+            t(query.from_user.id, 'no_contacts'),
             reply_markup=reply_markup
         )
         return
@@ -284,22 +465,22 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
         
         status = ""
         if balance > 0:
-            status = f" ↗️(owes {balance:,.0f})"
+            status = f" ↗️{t(query.from_user.id, 'owes_short', balance)}"
         elif balance < 0:
-            status = f" ↙️(you owe {abs(balance):,.0f})"
+            status = f" ↙️{t(query.from_user.id, 'you_owe_short', abs(balance))}"
         
         button_text = f"{name}{status}"
         callback_data = f"{action}_{contact_id}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
     
-    keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+    keyboard.append([InlineKeyboardButton(t(query.from_user.id, 'back_to_menu'), callback_data="back_to_menu")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     action_text = {
-        "lend": "↗️ Who did you lend money to?",
-        "borrow": "↙️ Who did you borrow money from?",
-        "clear": "✅ Clear balance with whom?",
-        "history": "📜 View history with whom?"
+        "lend": t(query.from_user.id, 'who_lent_to'),
+        "borrow": t(query.from_user.id, 'who_borrowed_from'),
+        "clear": t(query.from_user.id, 'clear_balance_with'),
+        "history": t(query.from_user.id, 'view_history_with')
     }
     
     await query.edit_message_text(
@@ -319,7 +500,7 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
     
     contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == int(contact_id)), None)
     if not contact:
-        await query.edit_message_text("❌ Contact not found!")
+        await query.edit_message_text(t(query.from_user.id, 'contact_not_found'))
         return ConversationHandler.END
     
     context.user_data['contact_name'] = contact[1]
@@ -329,16 +510,16 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
         return ConversationHandler.END
     
     action_text = {
-        "lend": f"↗️ How much did you lend to **{contact[1]}**?",
-        "borrow": f"↙️ How much did you borrow from **{contact[1]}**?",
-        "clear": f"✅ How much did you pay to **{contact[1]}**?"
+        "lend": t(query.from_user.id, 'how_much_lent', contact[1]),
+        "borrow": t(query.from_user.id, 'how_much_borrowed', contact[1]),
+        "clear": t(query.from_user.id, 'how_much_paid', contact[1])
     }
     
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(query.from_user.id, 'cancel'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        f"{action_text.get(action, 'Enter amount:')}\n\n💡 Send just the number (e.g., 1000)",
+        f"{action_text.get(action, 'Enter amount:')}{t(query.from_user.id, 'enter_amount_hint')}",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -351,7 +532,7 @@ async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE
         if amount <= 0:
             raise ValueError("Amount must be positive")
     except ValueError:
-        await update.message.reply_text("❌ Please enter a valid positive number (e.g., 1000)")
+        await update.message.reply_text(t(update.effective_user.id, 'invalid_amount'))
         return WAITING_FOR_AMOUNT
     
     context.user_data['amount'] = amount
@@ -359,22 +540,22 @@ async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE
     contact_name = context.user_data['contact_name']
     
     action_text = {
-        "lend": f"↗️ You lent **{amount:,.0f} DZD** to **{contact_name}**",
-        "borrow": f"↙️ You borrowed **{amount:,.0f} DZD** from **{contact_name}**",
-        "clear": f"✅ You paid **{amount:,.0f} DZD** to **{contact_name}**"
+        "lend": t(update.effective_user.id, 'you_lent', amount, contact_name),
+        "borrow": t(update.effective_user.id, 'you_borrowed', amount, contact_name),
+        "clear": t(update.effective_user.id, 'you_paid', amount, contact_name)
     }
     
     keyboard = [
         [
-            InlineKeyboardButton("💾 Save (No Note)", callback_data="save_transaction_no_note"),
-            InlineKeyboardButton("📝 Add Note", callback_data="add_note")
+            InlineKeyboardButton(t(update.effective_user.id, 'save_no_note'), callback_data="save_transaction_no_note"),
+            InlineKeyboardButton(t(update.effective_user.id, 'add_note'), callback_data="add_note")
         ],
-        [InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")]
+        [InlineKeyboardButton(t(update.effective_user.id, 'cancel'), callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"{action_text.get(action, '')}\n\nDo you want to add a note?",
+        f"{action_text.get(action, '')}{t(update.effective_user.id, 'add_note_question')}",
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -410,19 +591,23 @@ async def save_transaction_and_finish(update: Update, context: ContextTypes.DEFA
     note_text = f" ({note})" if note else ""
     
     action_emoji = {"lend": "↗️", "borrow": "↙️", "clear": "✅"}
-    action_verb = {"lend": "lent to", "borrow": "borrowed from", "clear": "paid to"}
+    action_verb = {
+        "lend": t(user_id, 'lent_to'), 
+        "borrow": t(user_id, 'borrowed_from'), 
+        "clear": t(user_id, 'paid_to')
+    }
     
-    message = f"{action_emoji.get(action, '')} **Transaction recorded!**\n\n"
-    message += f"You {action_verb.get(action, '')} **{contact_name}**: {amount:,.0f} DZD{note_text}\n\n"
+    message = f"{action_emoji.get(action, '')} {t(user_id, 'transaction_recorded')}\n\n"
+    message += f"{action_verb.get(action, '')} **{contact_name}**: {amount:,.0f} DZD{note_text}\n\n"
     
     if abs(balance) < 0.01:
-        message += f"🎉 You and **{contact_name}** are now settled!"
+        message += t(user_id, 'settled', contact_name)
     elif balance > 0:
-        message += f"💰 **{contact_name}** owes you **{balance:,.0f} {currency}**"
+        message += t(user_id, 'owes_you', contact_name, balance, currency)
     else:
-        message += f"💰 You owe **{contact_name}** **{abs(balance):,.0f} {currency}**"
+        message += t(user_id, 'you_owe', contact_name, abs(balance), currency)
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if update.message:
@@ -434,11 +619,12 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     contact_id = context.user_data['contact_id']
     contact_name = context.user_data['contact_name']
+    user_id = update.effective_user.id
     
-    history = bot.get_transaction_history(update.effective_user.id, contact_id)
+    history = bot.get_transaction_history(user_id, contact_id)
     
     if not history:
-        message = f"📭 No transactions found with **{contact_name}**"
+        message = t(user_id, 'no_transactions', contact_name)
     else:
         message = f"� **History with {contact_name}:**\n\n"
         
@@ -447,24 +633,24 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
             
             if transaction_type == 'lend':
                 emoji = "↗️"
-                action = "You lent"
+                action = t(user_id, 'you_lent_history')
             else:
                 emoji = "↙️" 
-                action = "You borrowed"
+                action = t(user_id, 'you_borrowed_history')
             
             note_text = f" - {note}" if note else ""
             message += f"{emoji} {action} {amount:,.0f} {currency}{note_text} ({date})\n"
         
-        balance, currency = bot.get_balance(update.effective_user.id, contact_id)
-        message += f"\n**Current Balance:**\n"
+        balance, currency = bot.get_balance(user_id, contact_id)
+        message += f"\n{t(user_id, 'current_balance')}\n"
         if balance > 0:
-            message += f"💰 {contact_name} owes you {balance:,.0f} {currency}"
+            message += t(user_id, 'owes_you', contact_name, balance, currency)
         elif balance < 0:
-            message += f"💰 You owe {contact_name} {abs(balance):,.0f} {currency}"
+            message += t(user_id, 'you_owe', contact_name, abs(balance), currency)
         else:
-            message += f"✅ Settled"
+            message += t(user_id, 'settled_balance')
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
@@ -472,27 +658,28 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
 async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
     
-    contacts = bot.get_user_contacts(query.from_user.id)
+    contacts = bot.get_user_contacts(user_id)
     
     if not contacts:
         keyboard = [
-            [InlineKeyboardButton("👤 Add Contact", callback_data="action_add_contact")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact")],
+            [InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            "📭 You don't have any contacts yet!",
+            t(user_id, 'no_contacts'),
             reply_markup=reply_markup
         )
         return
     
-    message = "📊 **Your Balances:**\n\n"
+    message = t(user_id, 'your_balances') + "\n\n"
     
     for contact in contacts:
         contact_id, name, phone, telegram_username = contact
-        balance, currency = bot.get_balance(query.from_user.id, contact_id)
+        balance, currency = bot.get_balance(user_id, contact_id)
         
         if balance > 0:
             message += f"↗️ **{name}** owes you **{balance:,.0f} {currency}**\n"
@@ -502,20 +689,17 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message += f"✅ **{name}** - settled\n"
     
     # Add total balance summary
-    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(query.from_user.id)
+    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(user_id)
     message += "\n" + "─" * 25 + "\n"
-    message += "💯 **TOTAL BALANCE:**\n"
+    message += t(user_id, 'total_balance') + "\n"
     if net_balance > 0:
-        message += f"💰 **Net: +{net_balance:,.0f} USD**\n"
-        message += "_You are owed more than you owe_"
+        message += t(user_id, 'net_positive', net_balance)
     elif net_balance < 0:
-        message += f"❌ **Net: {net_balance:,.0f} USD**\n"
-        message += "_You owe more than you are owed_"
+        message += t(user_id, 'net_negative', net_balance)
     else:
-        message += f"✅ **Net: 0 USD**\n"
-        message += "_All balances are settled_"
+        message += t(user_id, 'net_zero')
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
@@ -523,18 +707,19 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
     
-    contacts = bot.get_user_contacts(query.from_user.id)
+    contacts = bot.get_user_contacts(user_id)
     
     if not contacts:
         keyboard = [
-            [InlineKeyboardButton("👤 Add Contact First", callback_data="action_add_contact")],
-            [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+            [InlineKeyboardButton(t(user_id, 'add_contact_first'), callback_data="action_add_contact")],
+            [InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            "📭 You don't have any contacts to delete!",
+            t(user_id, 'no_contacts_delete'),
             reply_markup=reply_markup
         )
         return
@@ -542,23 +727,23 @@ async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAU
     keyboard = []
     for contact in contacts:
         contact_id, name, phone, telegram_username = contact
-        balance, currency = bot.get_balance(query.from_user.id, contact_id)
+        balance, currency = bot.get_balance(user_id, contact_id)
         
         status = ""
         if balance > 0:
-            status = f" 💰(owes {balance:,.0f})"
+            status = f" 💰{t(user_id, 'owes_short', balance)}"
         elif balance < 0:
-            status = f" 💸(you owe {abs(balance):,.0f})"
+            status = f" 💸{t(user_id, 'you_owe_short', abs(balance))}"
         
         button_text = f"🗑️ {name}{status}"
         callback_data = f"delete_{contact_id}"
         keyboard.append([InlineKeyboardButton(button_text, callback_data=callback_data)])
     
-    keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+    keyboard.append([InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        "🗑️ **Delete Contact**\n\n⚠️ Choose a contact to delete.\nThis will also delete all transaction history!",
+        t(user_id, 'delete_contact_title'),
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -566,34 +751,35 @@ async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAU
 async def confirm_delete_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
     
     contact_id = int(query.data.split('_')[1])
     
-    contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == contact_id), None)
+    contact = next((c for c in bot.get_user_contacts(user_id) if c[0] == contact_id), None)
     if not contact:
-        await query.edit_message_text("❌ Contact not found!")
+        await query.edit_message_text(t(user_id, 'contact_not_found'))
         return
     
     contact_name = contact[1]
-    balance, currency = bot.get_balance(query.from_user.id, contact_id)
+    balance, currency = bot.get_balance(user_id, contact_id)
     
     balance_warning = ""
     if balance != 0:
         if balance > 0:
-            balance_warning = f"\n⚠️ **Warning:** {contact_name} owes you {balance:,.0f} {currency}!"
+            balance_warning = t(user_id, 'warning_owes_you', contact_name, balance, currency)
         else:
-            balance_warning = f"\n⚠️ **Warning:** You owe {contact_name} {abs(balance):,.0f} {currency}!"
+            balance_warning = t(user_id, 'warning_you_owe', contact_name, abs(balance), currency)
     
     keyboard = [
         [
-            InlineKeyboardButton("❌ Cancel", callback_data="action_delete_contact"),
+            InlineKeyboardButton(t(user_id, 'cancel'), callback_data="action_delete_contact"),
             InlineKeyboardButton("🗑️ Delete", callback_data=f"confirm_delete_{contact_id}")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        f"🗑️ **Delete Contact**\n\nAre you sure you want to delete **{contact_name}**?{balance_warning}\n\nThis action cannot be undone!",
+        t(user_id, 'delete_confirmation', contact_name, balance_warning),
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -601,24 +787,25 @@ async def confirm_delete_contact(update: Update, context: ContextTypes.DEFAULT_T
 async def delete_contact_confirmed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
     
     contact_id = int(query.data.split('_')[2])
     
-    contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == contact_id), None)
+    contact = next((c for c in bot.get_user_contacts(user_id) if c[0] == contact_id), None)
     if not contact:
-        await query.edit_message_text("❌ Contact not found!")
+        await query.edit_message_text(t(user_id, 'contact_not_found'))
         return
     
     contact_name = contact[1]
     
-    success = bot.delete_contact(query.from_user.id, contact_id)
+    success = bot.delete_contact(user_id, contact_id)
     
     if success:
-        message = f"✅ **{contact_name}** has been deleted!\n\nAll transaction history has been removed."
+        message = t(user_id, 'delete_success', contact_name)
     else:
-        message = f"❌ Failed to delete **{contact_name}**."
+        message = t(user_id, 'delete_failed', contact_name)
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(message, reply_markup=reply_markup, parse_mode='Markdown')
@@ -626,12 +813,13 @@ async def delete_contact_confirmed(update: Update, context: ContextTypes.DEFAULT
 async def start_add_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
     
-    keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'cancel'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        "👤 **Add New Contact**\n\nSend me the contact's name:\n\n💡 Example: Ahmed Benali",
+        t(user_id, 'add_new_contact'),
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -640,18 +828,19 @@ async def start_add_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_contact_name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.message.text.strip()
+    user_id = update.effective_user.id
     
     if len(name) < 2:
-        await update.message.reply_text("❌ Name must be at least 2 characters long")
+        await update.message.reply_text(t(user_id, 'name_too_short'))
         return WAITING_FOR_CONTACT_NAME
     
-    contact_id = bot.add_contact(update.effective_user.id, name)
+    contact_id = bot.add_contact(user_id, name)
     
-    keyboard = [[InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        f"✅ **{name}** added to your contacts!",
+        t(user_id, 'contact_added', name),
         reply_markup=reply_markup,
         parse_mode='Markdown'
     )
@@ -677,6 +866,14 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     elif data == "action_delete_contact":
         await show_contacts_for_deletion(update, context)
+        return ConversationHandler.END
+    
+    elif data == "action_language":
+        await show_language_selection(update, context)
+        return ConversationHandler.END
+    
+    elif data.startswith("set_language_"):
+        await set_language(update, context)
         return ConversationHandler.END
     
     elif data.startswith("delete_") and not data.startswith("confirm_delete_"):
@@ -712,11 +909,12 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
     
     elif data == "add_note":
-        keyboard = [[InlineKeyboardButton("❌ Cancel", callback_data="back_to_menu")]]
+        user_id = query.from_user.id
+        keyboard = [[InlineKeyboardButton(t(user_id, 'cancel'), callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(
-            "📝 Send me a note for this transaction:\n\n💡 Example: lunch money, taxi fare, etc.",
+            t(user_id, 'send_note'),
             reply_markup=reply_markup
         )
         return WAITING_FOR_NOTE
