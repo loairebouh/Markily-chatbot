@@ -32,8 +32,8 @@ WAITING_FOR_CONTACT_NAME, WAITING_FOR_AMOUNT, WAITING_FOR_NOTE = range(3)
 TRANSLATIONS = {
     'en': {
         'welcome': "🏦 **Welcome {}!**\n\nChoose what you want to do:",
-        'lent_money': "💸 I Lent Money",
-        'borrowed_money': "💰 I Borrowed Money",
+        'lent_money': "💸 I Lent Money to",
+        'borrowed_money': "💰 I Borrowed Money from ",
         'add_contact': "👤 Add Contact",
         'view_balances': "📊 View Balances",
         'transaction_history': "📜 Transaction History",
@@ -66,8 +66,8 @@ TRANSLATIONS = {
         'borrowed_from': "borrowed from",
         'paid_to': "paid to",
         'settled': "🎉 You and **{}** are now settled!",
-        'owes_you': "💰 **{}** owes you **{:,.0f} {}**",
-        'you_owe': "💰 You owe **{}** **{:,.0f} {}**",
+        'owes_you': "↗️ **{}** owes you **{:,.0f} {}**",
+        'you_owe': "↙️ You owe **{}** **{:,.0f} {}**",
         'no_transactions': "📭 No transactions found with **{}**",
         'history_with': "📜 **History with {}:**",
         'you_lent_history': "You lent",
@@ -91,7 +91,17 @@ TRANSLATIONS = {
         'send_note': "📝 Send me a note for this transaction:\n\n💡 Example: lunch money, taxi fare, etc.",
         'choose_language': "🌐 **Choose Language / اختر اللغة**",
         'owes_short': "(owes {:,.0f})",
-        'you_owe_short': "(you owe {:,.0f})"
+        'you_owe_short': "(you owe {:,.0f})",
+        'analytics': "📊 Analytics",
+        'total_users': "👥 Total Users: {}",
+        'active_today': "🔥 Active Today: {}",
+        'new_users_today': "🆕 New Users Today: {}",
+        'total_transactions': "💼 Total Transactions: {}",
+        'total_chats': "💬 Total Chats: {}",
+        'language_stats': "🌐 Language Distribution:",
+        'analytics_summary': "📊 **Bot Analytics**\n\n{}\n{}\n{}\n{}\n{}\n\n{}\n{}",
+        'group_mode': "👥 Group Mode: Data is separate for each chat",
+        'private_mode': "👤 Private Mode: Personal data only"
     },
     'ar': {
         'welcome': "🏦 **مرحباً {}!**\n\nاختر ما تريد فعله:",
@@ -129,8 +139,8 @@ TRANSLATIONS = {
         'borrowed_from': "استدنت من",
         'paid_to': "دفعت لـ",
         'settled': "🎉 أنت و **{}** متصالحان الآن!",
-        'owes_you': "💰 **{}** مدين لك بـ **{:,.0f} {}**",
-        'you_owe': "💰 أنت مدين لـ **{}** بـ **{:,.0f} {}**",
+        'owes_you': "↗️ **{}** مدين لك بـ **{:,.0f} {}**",
+        'you_owe': "↙️ أنت مدين لـ **{}** بـ **{:,.0f} {}**",
         'no_transactions': "📭 لم توجد معاملات مع **{}**",
         'history_with': "📜 **التاريخ مع {}:**",
         'you_lent_history': "أقرضت",
@@ -154,7 +164,17 @@ TRANSLATIONS = {
         'send_note': "📝 أرسل لي ملاحظة لهذه المعاملة:\n\n💡 مثال: فلوس غداء، أجرة تاكسي، إلخ",
         'choose_language': "🌐 **Choose Language / اختر اللغة**",
         'owes_short': "(مدين {:,.0f})",
-        'you_owe_short': "(مدين عليك {:,.0f})"
+        'you_owe_short': "(مدين عليك {:,.0f})",
+        'analytics': "📊 الإحصائيات",
+        'total_users': "👥 إجمالي المستخدمين: {}",
+        'active_today': "🔥 نشطون اليوم: {}",
+        'new_users_today': "🆕 مستخدمون جدد اليوم: {}",
+        'total_transactions': "💼 إجمالي المعاملات: {}",
+        'total_chats': "💬 إجمالي المحادثات: {}",
+        'language_stats': "🌐 توزيع اللغات:",
+        'analytics_summary': "📊 **إحصائيات البوت**\n\n{}\n{}\n{}\n{}\n{}\n\n{}\n{}",
+        'group_mode': "👥 وضع المجموعة: البيانات منفصلة لكل محادثة",
+        'private_mode': "👤 الوضع الخاص: البيانات الشخصية فقط"
     }
 }
 
@@ -179,17 +199,75 @@ def t(user_id: int, key: str, *args) -> str:
 user_languages = {}
 
 class MarkilyBot:
-    def __init__(self, bot_token: str, db_path: str = "/app/data/markily.db"):
+    def __init__(self, bot_token: str, db_base_path: str = "/app/data"):
         self.bot_token = bot_token
-        self.db_path = db_path
+        self.db_base_path = db_base_path
         # Only create directory if it's not the current directory
-        dir_path = os.path.dirname(db_path)
-        if dir_path:
-            os.makedirs(dir_path, exist_ok=True)
-        self.init_database()
+        if self.db_base_path and self.db_base_path != ".":
+            os.makedirs(self.db_base_path, exist_ok=True)
+        # Initialize analytics database (shared across all chats)
+        self.init_analytics_database()
     
-    def init_database(self):
-        conn = sqlite3.connect(self.db_path)
+    def get_db_path(self, chat_id: int) -> str:
+        """Get database path for specific chat"""
+        if self.db_base_path and self.db_base_path != ".":
+            return os.path.join(self.db_base_path, f"markily_chat_{chat_id}.db")
+        return f"markily_chat_{chat_id}.db"
+    
+    def get_analytics_db_path(self) -> str:
+        """Get analytics database path"""
+        if self.db_base_path and self.db_base_path != ".":
+            return os.path.join(self.db_base_path, "markily_analytics.db")
+        return "markily_analytics.db"
+    
+    def init_analytics_database(self):
+        """Initialize analytics database for tracking user statistics"""
+        conn = sqlite3.connect(self.get_analytics_db_path())
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_analytics (
+                user_id INTEGER PRIMARY KEY,
+                username TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                total_commands INTEGER DEFAULT 0,
+                total_transactions INTEGER DEFAULT 0,
+                language_preference TEXT DEFAULT 'en'
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_analytics (
+                chat_id INTEGER PRIMARY KEY,
+                chat_type TEXT,
+                chat_title TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                total_users INTEGER DEFAULT 0,
+                total_transactions INTEGER DEFAULT 0
+            )
+        ''')
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS daily_stats (
+                date TEXT PRIMARY KEY,
+                active_users INTEGER DEFAULT 0,
+                new_users INTEGER DEFAULT 0,
+                total_transactions INTEGER DEFAULT 0,
+                total_commands INTEGER DEFAULT 0
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+    
+    def init_database(self, chat_id: int):
+        """Initialize database for specific chat"""
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -232,8 +310,105 @@ class MarkilyBot:
         conn.commit()
         conn.close()
     
-    def get_user_contacts(self, user_id: int) -> List[Tuple]:
-        conn = sqlite3.connect(self.db_path)
+    def track_user_activity(self, user_id: int, username: str = None, first_name: str = None, 
+                           last_name: str = None, command_type: str = "command"):
+        """Track user activity for analytics"""
+        conn = sqlite3.connect(self.get_analytics_db_path())
+        cursor = conn.cursor()
+        
+        # Update or insert user analytics
+        cursor.execute('''
+            INSERT OR REPLACE INTO user_analytics 
+            (user_id, username, first_name, last_name, first_seen, last_seen, total_commands, total_transactions, language_preference)
+            VALUES (?, ?, ?, ?, 
+                    COALESCE((SELECT first_seen FROM user_analytics WHERE user_id = ?), CURRENT_TIMESTAMP),
+                    CURRENT_TIMESTAMP,
+                    COALESCE((SELECT total_commands FROM user_analytics WHERE user_id = ?), 0) + ?,
+                    COALESCE((SELECT total_transactions FROM user_analytics WHERE user_id = ?), 0) + ?,
+                    COALESCE((SELECT language_preference FROM user_analytics WHERE user_id = ?), 'en'))
+        ''', (user_id, username, first_name, last_name, user_id, user_id, 
+              1 if command_type == "command" else 0, user_id, 
+              1 if command_type == "transaction" else 0, user_id))
+        
+        # Update daily stats
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('''
+            INSERT OR REPLACE INTO daily_stats 
+            (date, active_users, new_users, total_transactions, total_commands)
+            VALUES (?, 
+                    (SELECT COUNT(DISTINCT user_id) FROM user_analytics WHERE DATE(last_seen) = ?),
+                    (SELECT COUNT(*) FROM user_analytics WHERE DATE(first_seen) = ?),
+                    COALESCE((SELECT total_transactions FROM daily_stats WHERE date = ?), 0) + ?,
+                    COALESCE((SELECT total_commands FROM daily_stats WHERE date = ?), 0) + ?)
+        ''', (today, today, today, today, 
+              1 if command_type == "transaction" else 0, today,
+              1 if command_type == "command" else 0))
+        
+        conn.commit()
+        conn.close()
+    
+    def track_chat_activity(self, chat_id: int, chat_type: str, chat_title: str = None):
+        """Track chat activity for analytics"""
+        conn = sqlite3.connect(self.get_analytics_db_path())
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO chat_analytics 
+            (chat_id, chat_type, chat_title, created_at, last_activity, total_users, total_transactions)
+            VALUES (?, ?, ?, 
+                    COALESCE((SELECT created_at FROM chat_analytics WHERE chat_id = ?), CURRENT_TIMESTAMP),
+                    CURRENT_TIMESTAMP,
+                    COALESCE((SELECT total_users FROM chat_analytics WHERE chat_id = ?), 0),
+                    COALESCE((SELECT total_transactions FROM chat_analytics WHERE chat_id = ?), 0))
+        ''', (chat_id, chat_type, chat_title, chat_id, chat_id, chat_id))
+        
+        conn.commit()
+        conn.close()
+    
+    def get_analytics_summary(self) -> dict:
+        """Get analytics summary"""
+        conn = sqlite3.connect(self.get_analytics_db_path())
+        cursor = conn.cursor()
+        
+        # Total users
+        cursor.execute('SELECT COUNT(*) FROM user_analytics')
+        total_users = cursor.fetchone()[0]
+        
+        # Active users today
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute('SELECT COUNT(*) FROM user_analytics WHERE DATE(last_seen) = ?', (today,))
+        active_today = cursor.fetchone()[0]
+        
+        # New users today
+        cursor.execute('SELECT COUNT(*) FROM user_analytics WHERE DATE(first_seen) = ?', (today,))
+        new_today = cursor.fetchone()[0]
+        
+        # Total transactions
+        cursor.execute('SELECT SUM(total_transactions) FROM user_analytics')
+        total_transactions = cursor.fetchone()[0] or 0
+        
+        # Total chats
+        cursor.execute('SELECT COUNT(*) FROM chat_analytics')
+        total_chats = cursor.fetchone()[0]
+        
+        # Language distribution
+        cursor.execute('SELECT language_preference, COUNT(*) FROM user_analytics GROUP BY language_preference')
+        language_stats = dict(cursor.fetchall())
+        
+        conn.close()
+        
+        return {
+            'total_users': total_users,
+            'active_today': active_today,
+            'new_today': new_today,
+            'total_transactions': total_transactions,
+            'total_chats': total_chats,
+            'language_stats': language_stats
+        }
+    
+    def get_user_contacts(self, user_id: int, chat_id: int) -> List[Tuple]:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
             SELECT id, name, phone, telegram_username 
@@ -245,8 +420,8 @@ class MarkilyBot:
         conn.close()
         return contacts
     
-    def search_contact(self, user_id: int, search_term: str) -> Optional[Tuple]:
-        contacts = self.get_user_contacts(user_id)
+    def search_contact(self, user_id: int, search_term: str, chat_id: int) -> Optional[Tuple]:
+        contacts = self.get_user_contacts(user_id, chat_id)
         contact_names = [contact[1].lower() for contact in contacts]
         
         for i, contact in enumerate(contacts):
@@ -261,8 +436,9 @@ class MarkilyBot:
         
         return None
     
-    def add_contact(self, user_id: int, name: str, phone: str = None, telegram_username: str = None) -> int:
-        conn = sqlite3.connect(self.db_path)
+    def add_contact(self, user_id: int, name: str, chat_id: int, phone: str = None, telegram_username: str = None) -> int:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO contacts (user_id, name, phone, telegram_username)
@@ -273,8 +449,9 @@ class MarkilyBot:
         conn.close()
         return contact_id
     
-    def delete_contact(self, user_id: int, contact_id: int) -> bool:
-        conn = sqlite3.connect(self.db_path)
+    def delete_contact(self, user_id: int, contact_id: int, chat_id: int) -> bool:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute('DELETE FROM transactions WHERE user_id = ? AND contact_id = ?', (user_id, contact_id))
@@ -286,8 +463,9 @@ class MarkilyBot:
         return deleted
     
     def add_transaction(self, user_id: int, contact_id: int, amount: float, 
-                       currency: str, transaction_type: str, note: str = None) -> int:
-        conn = sqlite3.connect(self.db_path)
+                       currency: str, transaction_type: str, chat_id: int, note: str = None) -> int:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
             INSERT INTO transactions (user_id, contact_id, amount, currency, transaction_type, note)
@@ -296,10 +474,15 @@ class MarkilyBot:
         transaction_id = cursor.lastrowid
         conn.commit()
         conn.close()
+        
+        # Track transaction for analytics
+        self.track_user_activity(user_id, command_type="transaction")
+        
         return transaction_id
     
-    def get_balance(self, user_id: int, contact_id: int) -> Tuple[float, str]:
-        conn = sqlite3.connect(self.db_path)
+    def get_balance(self, user_id: int, contact_id: int, chat_id: int) -> Tuple[float, str]:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -325,8 +508,9 @@ class MarkilyBot:
         
         return balance, currency
     
-    def get_total_balance(self, user_id: int) -> Tuple[float, float, float]:
-        conn = sqlite3.connect(self.db_path)
+    def get_total_balance(self, user_id: int, chat_id: int) -> Tuple[float, float, float]:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -341,7 +525,7 @@ class MarkilyBot:
         
         for contact in contacts:
             contact_id = contact[0]
-            balance, _ = self.get_balance(user_id, contact_id)
+            balance, _ = self.get_balance(user_id, contact_id, chat_id)
             
             if balance > 0:
                 total_owed_to_me += balance
@@ -352,8 +536,9 @@ class MarkilyBot:
         
         return total_owed_to_me, total_i_owe, net_balance
     
-    def get_transaction_history(self, user_id: int, contact_id: int) -> List[Tuple]:
-        conn = sqlite3.connect(self.db_path)
+    def get_transaction_history(self, user_id: int, contact_id: int, chat_id: int) -> List[Tuple]:
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
             SELECT amount, currency, transaction_type, note, created_at
@@ -365,9 +550,13 @@ class MarkilyBot:
         conn.close()
         return history
     
-    def register_user(self, user_id: int, username: str = None, 
+    def register_user(self, user_id: int, chat_id: int, username: str = None, 
                      first_name: str = None, last_name: str = None):
-        conn = sqlite3.connect(self.db_path)
+        # Initialize database for this chat if it doesn't exist
+        self.init_database(chat_id)
+        
+        db_path = self.get_db_path(chat_id)
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         cursor.execute('''
             INSERT OR REPLACE INTO users (telegram_id, username, first_name, last_name)
@@ -375,12 +564,22 @@ class MarkilyBot:
         ''', (user_id, username, first_name, last_name))
         conn.commit()
         conn.close()
+        
+        # Track user activity for analytics
+        self.track_user_activity(user_id, username, first_name, last_name)
 
 bot = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    bot.register_user(user.id, user.username, user.first_name, user.last_name)
+    chat = update.effective_chat
+    
+    # Register user and track chat activity
+    bot.register_user(user.id, chat.id, user.username, user.first_name, user.last_name)
+    bot.track_chat_activity(chat.id, chat.type, getattr(chat, 'title', None))
+    
+    # Track command activity
+    bot.track_user_activity(user.id, user.username, user.first_name, user.last_name, "command")
     
     keyboard = [
         [
@@ -443,7 +642,8 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     await query.answer()
     
-    contacts = bot.get_user_contacts(query.from_user.id)
+    chat_id = query.message.chat.id
+    contacts = bot.get_user_contacts(query.from_user.id, chat_id)
     
     if not contacts:
         keyboard = [
@@ -461,7 +661,7 @@ async def show_contacts_for_action(update: Update, context: ContextTypes.DEFAULT
     keyboard = []
     for contact in contacts:
         contact_id, name, phone, telegram_username = contact
-        balance, currency = bot.get_balance(query.from_user.id, contact_id)
+        balance, currency = bot.get_balance(query.from_user.id, contact_id, chat_id)
         
         status = ""
         if balance > 0:
@@ -497,8 +697,10 @@ async def handle_contact_selection(update: Update, context: ContextTypes.DEFAULT
     
     context.user_data['action'] = action
     context.user_data['contact_id'] = int(contact_id)
+    context.user_data['chat_id'] = query.message.chat.id
     
-    contact = next((c for c in bot.get_user_contacts(query.from_user.id) if c[0] == int(contact_id)), None)
+    chat_id = query.message.chat.id
+    contact = next((c for c in bot.get_user_contacts(query.from_user.id, chat_id) if c[0] == int(contact_id)), None)
     if not contact:
         await query.edit_message_text(t(query.from_user.id, 'contact_not_found'))
         return ConversationHandler.END
@@ -575,18 +777,19 @@ async def save_transaction_and_finish(update: Update, context: ContextTypes.DEFA
     contact_name = context.user_data['contact_name']
     amount = context.user_data['amount']
     note = context.user_data.get('note', '')
+    chat_id = context.user_data.get('chat_id') or update.effective_chat.id
     
     user_id = update.effective_user.id
     
     if action == "clear":
-        current_balance, _ = bot.get_balance(user_id, contact_id)
+        current_balance, _ = bot.get_balance(user_id, contact_id, chat_id)
         transaction_type = 'borrow' if current_balance > 0 else 'lend'
     else:
         transaction_type = action
     
-    bot.add_transaction(user_id, contact_id, amount, 'DZD', transaction_type, note)
+    bot.add_transaction(user_id, contact_id, amount, 'DZD', transaction_type, chat_id, note)
     
-    balance, currency = bot.get_balance(user_id, contact_id)
+    balance, currency = bot.get_balance(user_id, contact_id, chat_id)
     
     note_text = f" ({note})" if note else ""
     
@@ -619,9 +822,10 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     contact_id = context.user_data['contact_id']
     contact_name = context.user_data['contact_name']
+    chat_id = context.user_data.get('chat_id') or query.message.chat.id
     user_id = update.effective_user.id
     
-    history = bot.get_transaction_history(user_id, contact_id)
+    history = bot.get_transaction_history(user_id, contact_id, chat_id)
     
     if not history:
         message = t(user_id, 'no_transactions', contact_name)
@@ -641,7 +845,7 @@ async def show_transaction_history(update: Update, context: ContextTypes.DEFAULT
             note_text = f" - {note}" if note else ""
             message += f"{emoji} {action} {amount:,.0f} {currency}{note_text} ({date})\n"
         
-        balance, currency = bot.get_balance(user_id, contact_id)
+        balance, currency = bot.get_balance(user_id, contact_id, chat_id)
         message += f"\n{t(user_id, 'current_balance')}\n"
         if balance > 0:
             message += t(user_id, 'owes_you', contact_name, balance, currency)
@@ -659,8 +863,9 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    chat_id = query.message.chat.id
     
-    contacts = bot.get_user_contacts(user_id)
+    contacts = bot.get_user_contacts(user_id, chat_id)
     
     if not contacts:
         keyboard = [
@@ -679,7 +884,7 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for contact in contacts:
         contact_id, name, phone, telegram_username = contact
-        balance, currency = bot.get_balance(user_id, contact_id)
+        balance, currency = bot.get_balance(user_id, contact_id, chat_id)
         
         if balance > 0:
             message += f"↗️ **{name}** owes you **{balance:,.0f} {currency}**\n"
@@ -689,7 +894,7 @@ async def show_all_balances(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message += f"✅ **{name}** - settled\n"
     
     # Add total balance summary
-    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(user_id)
+    total_owed_to_me, total_i_owe, net_balance = bot.get_total_balance(user_id, chat_id)
     message += "\n" + "─" * 25 + "\n"
     message += t(user_id, 'total_balance') + "\n"
     if net_balance > 0:
@@ -708,8 +913,9 @@ async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAU
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    chat_id = query.message.chat.id
     
-    contacts = bot.get_user_contacts(user_id)
+    contacts = bot.get_user_contacts(user_id, chat_id)
     
     if not contacts:
         keyboard = [
@@ -727,7 +933,7 @@ async def show_contacts_for_deletion(update: Update, context: ContextTypes.DEFAU
     keyboard = []
     for contact in contacts:
         contact_id, name, phone, telegram_username = contact
-        balance, currency = bot.get_balance(user_id, contact_id)
+        balance, currency = bot.get_balance(user_id, contact_id, chat_id)
         
         status = ""
         if balance > 0:
@@ -752,16 +958,17 @@ async def confirm_delete_contact(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    chat_id = query.message.chat.id
     
     contact_id = int(query.data.split('_')[1])
     
-    contact = next((c for c in bot.get_user_contacts(user_id) if c[0] == contact_id), None)
+    contact = next((c for c in bot.get_user_contacts(user_id, chat_id) if c[0] == contact_id), None)
     if not contact:
         await query.edit_message_text(t(user_id, 'contact_not_found'))
         return
     
     contact_name = contact[1]
-    balance, currency = bot.get_balance(user_id, contact_id)
+    balance, currency = bot.get_balance(user_id, contact_id, chat_id)
     
     balance_warning = ""
     if balance != 0:
@@ -788,17 +995,18 @@ async def delete_contact_confirmed(update: Update, context: ContextTypes.DEFAULT
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    chat_id = query.message.chat.id
     
     contact_id = int(query.data.split('_')[2])
     
-    contact = next((c for c in bot.get_user_contacts(user_id) if c[0] == contact_id), None)
+    contact = next((c for c in bot.get_user_contacts(user_id, chat_id) if c[0] == contact_id), None)
     if not contact:
         await query.edit_message_text(t(user_id, 'contact_not_found'))
         return
     
     contact_name = contact[1]
     
-    success = bot.delete_contact(user_id, contact_id)
+    success = bot.delete_contact(user_id, contact_id, chat_id)
     
     if success:
         message = t(user_id, 'delete_success', contact_name)
@@ -826,15 +1034,65 @@ async def start_add_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     return WAITING_FOR_CONTACT_NAME
 
+async def show_analytics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show bot analytics (admin only)"""
+    user_id = update.effective_user.id
+    
+    # Admin check - only these users can see analytics
+    ADMIN_IDS = [2133241990]  
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ Access denied - Admin only")
+        return
+    
+    stats = bot.get_analytics_summary()
+    
+    total_users_text = t(user_id, 'total_users', stats['total_users'])
+    active_today_text = t(user_id, 'active_today', stats['active_today'])
+    new_today_text = t(user_id, 'new_users_today', stats['new_today'])
+    total_transactions_text = t(user_id, 'total_transactions', stats['total_transactions'])
+    total_chats_text = t(user_id, 'total_chats', stats['total_chats'])
+    
+    lang_stats_text = t(user_id, 'language_stats')
+    for lang, count in stats['language_stats'].items():
+        lang_name = "English" if lang == 'en' else "العربية"
+        lang_stats_text += f"\n  • {lang_name}: {count}"
+    
+    mode_text = t(user_id, 'group_mode') if update.effective_chat.type != 'private' else t(user_id, 'private_mode')
+    
+    message = t(user_id, 'analytics_summary', 
+                total_users_text, active_today_text, new_today_text, 
+                total_transactions_text, total_chats_text,
+                lang_stats_text, mode_text)
+    
+    if update.message:
+        await update.message.reply_text(message, parse_mode='Markdown')
+    else:
+        await update.callback_query.edit_message_text(message, parse_mode='Markdown')
+
+async def get_my_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Helper command to get your user ID for analytics setup"""
+    user_id = update.effective_user.id
+    username = update.effective_user.username or "No username"
+    first_name = update.effective_user.first_name or "No name"
+    
+    message = f"🆔 **Your Telegram Info:**\n\n"
+    message += f"**User ID:** `{user_id}`\n"
+    message += f"**Username:** @{username}\n" 
+    message += f"**Name:** {first_name}\n\n"
+    message += f"💡 Copy your User ID (`{user_id}`) and replace `123456789` in the ADMIN_IDS list in your bot code to enable analytics access."
+    
+    await update.message.reply_text(message, parse_mode='Markdown')
+
 async def handle_contact_name_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.message.text.strip()
     user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
     
     if len(name) < 2:
         await update.message.reply_text(t(user_id, 'name_too_short'))
         return WAITING_FOR_CONTACT_NAME
     
-    contact_id = bot.add_contact(user_id, name)
+    contact_id = bot.add_contact(user_id, name, chat_id)
     
     keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -936,8 +1194,8 @@ async def main():
         return
     
     # Use local database path when not in Docker
-    db_path = "/app/data/markily.db" if os.path.exists("/app") else "markily.db"
-    bot = MarkilyBot(BOT_TOKEN, db_path)
+    db_base_path = "/app/data" if os.path.exists("/app") else "."
+    bot = MarkilyBot(BOT_TOKEN, db_base_path)
     
     application = Application.builder().token(BOT_TOKEN).build()
     
@@ -960,10 +1218,15 @@ async def main():
     )
     
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("analytics", show_analytics))
+    application.add_handler(CommandHandler("myid", get_my_id))
     application.add_handler(conv_handler)
     application.add_handler(CallbackQueryHandler(button_callback))
     
     print("🚀 Markily Bot is starting...")
+    print("📊 Analytics tracking enabled")
+    print("👥 Group support enabled - separate data per chat")
+    print("💾 Database structure: chat-specific databases")
     await application.start()
     await application.updater.start_polling()
     

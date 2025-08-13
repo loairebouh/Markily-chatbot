@@ -73,6 +73,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <<<<<<< HEAD
+
 # 🏦 Markily - Telegram Debt Tracker Bot
 
 A Telegram bot with button interface to track money you lend and borrow. Never forget who owes what again!
@@ -80,9 +81,11 @@ A Telegram bot with button interface to track money you lend and borrow. Never f
 ## 🚀 Quick Setup
 
 1. **Get Bot Token**
+
    - Message [@BotFather](https://t.me/botfather) → `/newbot`
 
 2. **Local Setup**
+
    ```bash
    git clone <repo-url>
    cd markily-telegram-chatbot
@@ -99,7 +102,7 @@ A Telegram bot with button interface to track money you lend and borrow. Never f
 ## ✨ Features
 
 - 💰 Track lending/borrowing with button interface
-- 👥 Contact management 
+- 👥 Contact management
 - 📊 Balance summaries and transaction history
 - ✅ Clear balances and delete contacts
 - 🗃️ SQLite database with notes
@@ -108,8 +111,9 @@ A Telegram bot with button interface to track money you lend and borrow. Never f
 ## 🎮 How to Use
 
 Start the bot with `/start` and use the buttons:
+
 - **💸 I Lent Money** / **💰 I Borrowed Money**
-- **👤 Add Contact** / **🗑️ Delete Contact** 
+- **👤 Add Contact** / **🗑️ Delete Contact**
 - **📊 View Balances** / **📜 Transaction History**
 - **✅ Clear Balance**
 - **🌐 Language** - Switch between English and Arabic
@@ -137,4 +141,5 @@ MIT License
 
 =======
 **Made with ❤️ for tracking money between friends**
->>>>>>> a384fa9 (Add multilingual support with English and Arabic translations)
+
+> > > > > > > a384fa9 (Add multilingual support with English and Arabic translations)
