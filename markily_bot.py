@@ -32,8 +32,8 @@ WAITING_FOR_CONTACT_NAME, WAITING_FOR_AMOUNT, WAITING_FOR_NOTE = range(3)
 TRANSLATIONS = {
     'en': {
         'welcome': "🏦 **Welcome {}!**\n\nChoose what you want to do:",
-        'lent_money': "💸 I Lent Money to",
-        'borrowed_money': "💰 I Borrowed Money from ",
+        'lent_money': "↗️ + I Lent Money to",
+        'borrowed_money': "↙️ -  I Borrowed Money from ",
         'add_contact': "👤 Add Contact",
         'view_balances': "📊 View Balances",
         'transaction_history': "📜 Transaction History",
@@ -105,8 +105,8 @@ TRANSLATIONS = {
     },
     'ar': {
         'welcome': "🏦 **مرحباً {}!**\n\nاختر ما تريد فعله:",
-        'lent_money': "💸 أقرضت مالاً",
-        'borrowed_money': "💰 استدنت مالاً", 
+        'lent_money': "↗️ أقرضت مالاً",
+        'borrowed_money': "↙️ استدنت مالاً", 
         'add_contact': "👤 إضافة جهة اتصال",
         'view_balances': "📊 عرض الأرصدة",
         'transaction_history': "📜 تاريخ المعاملات",
