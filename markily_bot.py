@@ -677,11 +677,13 @@ class MarkilyBot:
             # Get transaction history and contact info
             history = self.get_transaction_history(user_id, contact_id, chat_id)
             if not history:
+                logger.warning(f"No transaction history found for user {user_id}, contact {contact_id}")
                 return None
                 
             contacts = self.get_user_contacts(user_id, chat_id)
             contact = next((c for c in contacts if c[0] == contact_id), None)
             if not contact:
+                logger.warning(f"Contact {contact_id} not found for user {user_id}")
                 return None
                 
             contact_name = contact[1]
@@ -732,30 +734,38 @@ class MarkilyBot:
             
             # Add Markily Logo from file
             logo_path = "./logo.png"
-            if os.path.exists(logo_path):
-                try:
+            try:
+                if os.path.exists(logo_path):
                     logo = Image(logo_path, width=4*cm, height=2*cm)
                     logo.hAlign = 'CENTER'
                     story.append(logo)
                     story.append(Spacer(1, 15))
-                except Exception as e:
-                    logger.warning(f"Could not load logo: {e}")
-                    # Fallback to text logo
+                else:
+                    # Fallback to text logo if file doesn't exist
                     logo_text = "💰 MARKILY"
                     story.append(Paragraph(f'<font size="24" color="#011C1C"><b>{logo_text}</b></font>', logo_style))
                     story.append(Spacer(1, 10))
-            else:
-                # Fallback to text logo if file doesn't exist
+            except Exception as logo_error:
+                logger.warning(f"Logo loading failed: {logo_error}")
+                # Fallback to text logo
                 logo_text = "💰 MARKILY"
                 story.append(Paragraph(f'<font size="24" color="#011C1C"><b>{logo_text}</b></font>', logo_style))
                 story.append(Spacer(1, 10))
             
-            # Title
-            title = t(user_id, 'pdf_title') if lang == 'ar' else "Transaction Statement"
+            # Title - use safe translation approach
+            try:
+                if is_arabic:
+                    title = t(user_id, 'pdf_title')
+                    subtitle = t(user_id, 'pdf_subtitle') 
+                else:
+                    title = "Transaction Statement"
+                    subtitle = "Debt & Payment Record"
+            except Exception as trans_error:
+                logger.warning(f"Translation error: {trans_error}")
+                title = "Transaction Statement"
+                subtitle = "Debt & Payment Record"
+                
             story.append(Paragraph(title, title_style))
-            
-            # Subtitle  
-            subtitle = t(user_id, 'pdf_subtitle') if lang == 'ar' else "Debt & Payment Record"
             story.append(Paragraph(subtitle, subtitle_style))
             
             # Divider line
@@ -769,10 +779,13 @@ class MarkilyBot:
             
             # Date range
             if history:
-                first_date = datetime.fromisoformat(history[-1][4]).strftime("%Y/%m/%d")
-                last_date = datetime.fromisoformat(history[0][4]).strftime("%Y/%m/%d") 
-                date_label = "الفترة:" if is_arabic else "Period:"
-                story.append(Paragraph(f'<b>{date_label}</b> {first_date} - {last_date}', info_style))
+                try:
+                    first_date = datetime.fromisoformat(history[-1][4]).strftime("%Y/%m/%d")
+                    last_date = datetime.fromisoformat(history[0][4]).strftime("%Y/%m/%d") 
+                    date_label = "الفترة:" if is_arabic else "Period:"
+                    story.append(Paragraph(f'<b>{date_label}</b> {first_date} - {last_date}', info_style))
+                except Exception as date_error:
+                    logger.warning(f"Date formatting error: {date_error}")
             
             # Generated date
             generated_label = "تاريخ الإنشاء:" if is_arabic else "Generated:"
@@ -799,44 +812,49 @@ class MarkilyBot:
             
             # Process transactions chronologically
             for amount, currency, transaction_type, note, created_at in reversed(history):
-                date_str = datetime.fromisoformat(created_at).strftime("%m/%d")
-                
-                # Calculate balance and description
-                if transaction_type == 'lent':
-                    running_balance += amount
-                    total_lent += amount
-                    if is_arabic:
-                        desc = f"أقرضت {amount:,.0f}"
-                    else:
-                        desc = f"Lent {amount:,.0f}"
-                    amount_display = f"+{amount:,.0f}"
-                else:  # borrowed
-                    running_balance -= amount  
-                    total_borrowed += amount
-                    if is_arabic:
-                        desc = f"استدنت {amount:,.0f}"
-                    else:
-                        desc = f"Borrowed {amount:,.0f}"
-                    amount_display = f"-{amount:,.0f}"
-                
-                # Add note if available
-                if note:
-                    desc += f" ({note})"
-                
-                # Format balance
-                if running_balance > 0:
-                    balance_str = f"+{running_balance:,.0f}"
-                elif running_balance < 0:
-                    balance_str = f"{running_balance:,.0f}"
-                else:
-                    balance_str = "0"
-                
-                if is_arabic:
-                    row = [balance_str, amount_display, desc, date_str]
-                else:
-                    row = [date_str, desc, amount_display, balance_str]
+                try:
+                    date_str = datetime.fromisoformat(created_at).strftime("%m/%d")
                     
-                data.append(row)
+                    # Calculate balance and description
+                    if transaction_type == 'lent':
+                        running_balance += amount
+                        total_lent += amount
+                        if is_arabic:
+                            desc = f"أقرضت {amount:,.0f}"
+                        else:
+                            desc = f"Lent {amount:,.0f}"
+                        amount_display = f"+{amount:,.0f}"
+                    else:  # borrowed
+                        running_balance -= amount  
+                        total_borrowed += amount
+                        if is_arabic:
+                            desc = f"استدنت {amount:,.0f}"
+                        else:
+                            desc = f"Borrowed {amount:,.0f}"
+                        amount_display = f"-{amount:,.0f}"
+                    
+                    # Add note if available
+                    if note:
+                        desc += f" ({note})"
+                    
+                    # Format balance
+                    if running_balance > 0:
+                        balance_str = f"+{running_balance:,.0f}"
+                    elif running_balance < 0:
+                        balance_str = f"{running_balance:,.0f}"
+                    else:
+                        balance_str = "0"
+                    
+                    if is_arabic:
+                        row = [balance_str, amount_display, desc, date_str]
+                    else:
+                        row = [date_str, desc, amount_display, balance_str]
+                        
+                    data.append(row)
+                    
+                except Exception as row_error:
+                    logger.warning(f"Error processing transaction row: {row_error}")
+                    continue
             
             # Create simplified table
             table = Table(data, colWidths=[2*cm, 6*cm, 3*cm, 2.5*cm])
@@ -931,10 +949,15 @@ class MarkilyBot:
             # Build PDF
             doc.build(story)
             buffer.seek(0)
-            return buffer.getvalue()
+            pdf_bytes = buffer.getvalue()
+            
+            logger.info(f"PDF generated successfully for user {user_id}, contact {contact_id} - {len(pdf_bytes):,} bytes")
+            return pdf_bytes
             
         except Exception as e:
-            logger.error(f"Error generating PDF: {e}")
+            logger.error(f"Error generating PDF for user {user_id}, contact {contact_id}: {e}")
+            import traceback
+            logger.error(f"PDF generation traceback: {traceback.format_exc()}")
             return None
     
     def register_user(self, user_id: int, chat_id: int, username: str = None, 
