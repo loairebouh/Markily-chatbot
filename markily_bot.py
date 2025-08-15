@@ -2306,7 +2306,6 @@ async def main():
     await application.updater.start_polling()
     
     try:
-        import asyncio
         await asyncio.Event().wait()
     except KeyboardInterrupt:
         print("\n👋 Shutting down Markily Bot...")
@@ -2316,5 +2315,4 @@ async def main():
         await application.shutdown()
 
 if __name__ == '__main__':
-    import asyncio
     asyncio.run(main())
