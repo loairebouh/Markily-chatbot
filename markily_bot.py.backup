@@ -937,6 +937,170 @@ class MarkilyBot:
             logger.error(f"Error generating PDF: {e}")
             return None
     
+    def generate_pdf_report(self, user_id: int, contact_id: int, chat_id: int, user_name: str = "User") -> Optional[bytes]:
+        """Generate PDF report for transaction history with a contact"""
+        try:
+            # Get transaction history and contact info
+            history = self.get_transaction_history(user_id, contact_id, chat_id)
+            if not history:
+                return None
+                
+            contacts = self.get_user_contacts(user_id, chat_id)
+            contact = next((c for c in contacts if c[0] == contact_id), None)
+            if not contact:
+                return None
+                
+            contact_name = contact[1]
+            
+            # Create PDF in memory
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+            
+            # Get styles
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=18,
+                spaceAfter=30,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor('#2E86AB')
+            )
+            
+            subtitle_style = ParagraphStyle(
+                'CustomSubtitle',
+                parent=styles['Heading2'],
+                fontSize=14,
+                spaceAfter=20,
+                alignment=TA_CENTER,
+                textColor=colors.HexColor('#A23B72')
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Title and header
+            lang = get_user_language(user_id)
+            story.append(Paragraph(TRANSLATIONS[lang]['pdf_title'], title_style))
+            story.append(Paragraph(TRANSLATIONS[lang]['pdf_subtitle'], subtitle_style))
+            story.append(Spacer(1, 20))
+            
+            # Contact and date info
+            story.append(Paragraph(f"<b>{TRANSLATIONS[lang]['pdf_contact']}</b>".format(contact_name), styles['Normal']))
+            
+            # Get date range
+            first_date = datetime.fromisoformat(history[-1][4]).strftime("%Y-%m-%d")
+            last_date = datetime.fromisoformat(history[0][4]).strftime("%Y-%m-%d")
+            story.append(Paragraph(f"<b>{TRANSLATIONS[lang]['pdf_period']}</b>".format(first_date, last_date), styles['Normal']))
+            story.append(Paragraph(f"<b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            # Transaction table
+            data = [
+                [TRANSLATIONS[lang]['pdf_date'], TRANSLATIONS[lang]['pdf_description'], 
+                 TRANSLATIONS[lang]['pdf_amount'], TRANSLATIONS[lang]['pdf_balance']]
+            ]
+            
+            # Calculate running balance and totals
+            running_balance = 0.0
+            total_lent = 0.0
+            total_borrowed = 0.0
+            
+            # Process transactions in chronological order (reverse)
+            for amount, currency, transaction_type, note, created_at in reversed(history):
+                date = datetime.fromisoformat(created_at).strftime("%m/%d/%Y")
+                
+                if transaction_type == 'lend':
+                    running_balance += amount
+                    total_lent += amount
+                    description = f"{TRANSLATIONS[lang]['pdf_you_lent']}"
+                    amount_str = f"+{amount:,.0f}"
+                else:
+                    running_balance -= amount
+                    total_borrowed += amount
+                    description = f"{TRANSLATIONS[lang]['pdf_you_borrowed']}"
+                    amount_str = f"-{amount:,.0f}"
+                
+                if note:
+                    description += f" ({note})"
+                
+                balance_str = f"{running_balance:,.0f}"
+                if running_balance > 0:
+                    balance_str = f"+{balance_str}"
+                elif running_balance < 0:
+                    balance_str = f"{balance_str}"
+                
+                data.append([date, description, amount_str, balance_str])
+            
+            # Create table
+            table = Table(data, colWidths=[1.5*inch, 3*inch, 1.5*inch, 1.5*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2E86AB')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('ALIGN', (1, 1), (1, -1), 'LEFT'),  # Description column left-aligned
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
+            ]))
+            
+            story.append(table)
+            story.append(Spacer(1, 20))
+            
+            # Summary section
+            story.append(Paragraph(f"<b>{TRANSLATIONS[lang]['pdf_summary']}</b>", styles['Heading3']))
+            story.append(Paragraph(f"{TRANSLATIONS[lang]['pdf_total_lent']} {total_lent:,.0f} DZD", styles['Normal']))
+            story.append(Paragraph(f"{TRANSLATIONS[lang]['pdf_total_borrowed']} {total_borrowed:,.0f} DZD", styles['Normal']))
+            
+            # Final balance
+            final_balance = running_balance
+            balance_text = f"{TRANSLATIONS[lang]['pdf_net_balance']} "
+            if final_balance > 0:
+                balance_text += f"+{final_balance:,.0f} DZD (Contact owes you)"
+                balance_color = colors.green
+            elif final_balance < 0:
+                balance_text += f"{final_balance:,.0f} DZD (You owe contact)"
+                balance_color = colors.red
+            else:
+                balance_text += "0 DZD (Settled)"
+                balance_color = colors.blue
+            
+            final_balance_style = ParagraphStyle(
+                'FinalBalance',
+                parent=styles['Normal'],
+                fontSize=12,
+                textColor=balance_color,
+                fontName='Helvetica-Bold'
+            )
+            
+            story.append(Paragraph(balance_text, final_balance_style))
+            story.append(Spacer(1, 30))
+            
+            # Footer
+            footer_text = TRANSLATIONS[lang]['pdf_footer'].format(datetime.now().strftime("%Y-%m-%d %H:%M"))
+            footer_style = ParagraphStyle(
+                'Footer',
+                parent=styles['Normal'],
+                fontSize=8,
+                alignment=TA_CENTER,
+                textColor=colors.grey
+            )
+            story.append(Paragraph(footer_text, footer_style))
+            
+            # Build PDF
+            doc.build(story)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+        except Exception as e:
+            logger.error(f"Error generating PDF: {e}")
+            return None
+    
     def register_user(self, user_id: int, chat_id: int, username: str = None, 
                      first_name: str = None, last_name: str = None):
         # Initialize database for this chat if it doesn't exist
@@ -1649,70 +1813,16 @@ async def export_pdf_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         
-        # Show main menu again after PDF generation
-        keyboard = [
-            [
-                InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
-                InlineKeyboardButton(t(user_id, 'borrowed_money'), callback_data="action_borrow")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
-                InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
-                InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
-                InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
-                InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
-            ]
-        ]
+        # Show back to menu option
+        keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Get user's first name for welcome message
-        user_name = query.from_user.first_name or "User"
-        welcome_text = t(user_id, 'welcome', user_name)
-        
-        await query.edit_message_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(success_message, reply_markup=reply_markup, parse_mode='Markdown')
         
     else:
-        # Error generating PDF - show main menu
-        keyboard = [
-            [
-                InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
-                InlineKeyboardButton(t(user_id, 'borrowed_money'), callback_data="action_borrow")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
-                InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
-                InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
-                InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
-                InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
-            ]
-        ]
+        # Error generating PDF
+        keyboard = [[InlineKeyboardButton(t(user_id, 'back_to_menu'), callback_data="back_to_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Get user's first name for welcome message
-        user_name = query.from_user.first_name or "User"
-        welcome_text = t(user_id, 'welcome', user_name)
-        
-        # Show error message first, then welcome message
-        error_text = t(user_id, 'pdf_error') + "\n\n" + welcome_text
-        await query.edit_message_text(error_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(t(user_id, 'pdf_error'), reply_markup=reply_markup)
 
 async def get_my_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Helper command to get your user ID for analytics setup"""
