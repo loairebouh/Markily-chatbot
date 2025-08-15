@@ -12,10 +12,13 @@ from dateutil import parser as date_parser
 from dateutil.relativedelta import relativedelta
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.units import inch, cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import urllib.request
 
 load_dotenv()
 
@@ -667,6 +670,272 @@ class MarkilyBot:
         history = cursor.fetchall()
         conn.close()
         return history
+    
+    def generate_pdf_report(self, user_id: int, contact_id: int, chat_id: int, user_name: str = "User") -> Optional[bytes]:
+        """Generate simplified PDF report with Arabic support and Markily logo"""
+        try:
+            # Get transaction history and contact info
+            history = self.get_transaction_history(user_id, contact_id, chat_id)
+            if not history:
+                return None
+                
+            contacts = self.get_user_contacts(user_id, chat_id)
+            contact = next((c for c in contacts if c[0] == contact_id), None)
+            if not contact:
+                return None
+                
+            contact_name = contact[1]
+            lang = get_user_language(user_id)
+            
+            # Create PDF in memory
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, 
+                                  rightMargin=2*cm, leftMargin=2*cm, 
+                                  topMargin=2*cm, bottomMargin=2*cm)
+            
+            # Define styles
+            styles = getSampleStyleSheet()
+            
+            # Arabic/RTL support
+            is_arabic = lang == 'ar'
+            alignment = TA_RIGHT if is_arabic else TA_LEFT
+            title_alignment = TA_CENTER
+            
+            # Custom styles
+            logo_style = ParagraphStyle('LogoStyle', alignment=TA_CENTER, spaceAfter=20)
+            
+            title_style = ParagraphStyle(
+                'TitleStyle', fontSize=20, fontName='Helvetica-Bold',
+                alignment=title_alignment, spaceAfter=15,
+                textColor=colors.HexColor('#011C1C')
+            )
+            
+            subtitle_style = ParagraphStyle(
+                'SubtitleStyle', fontSize=14, fontName='Helvetica',
+                alignment=title_alignment, spaceAfter=20,
+                textColor=colors.HexColor('#666666')
+            )
+            
+            info_style = ParagraphStyle(
+                'InfoStyle', fontSize=11, fontName='Helvetica',
+                alignment=alignment, spaceAfter=8
+            )
+            
+            header_style = ParagraphStyle(
+                'HeaderStyle', fontSize=12, fontName='Helvetica-Bold',
+                alignment=alignment, spaceAfter=15,
+                textColor=colors.HexColor('#011C1C')
+            )
+            
+            # Build PDF content
+            story = []
+            
+            # Add Markily Logo from file
+            logo_path = "./logo.png"
+            if os.path.exists(logo_path):
+                try:
+                    logo = Image(logo_path, width=4*cm, height=2*cm)
+                    logo.hAlign = 'CENTER'
+                    story.append(logo)
+                    story.append(Spacer(1, 15))
+                except Exception as e:
+                    logger.warning(f"Could not load logo: {e}")
+                    # Fallback to text logo
+                    logo_text = "💰 MARKILY"
+                    story.append(Paragraph(f'<font size="24" color="#011C1C"><b>{logo_text}</b></font>', logo_style))
+                    story.append(Spacer(1, 10))
+            else:
+                # Fallback to text logo if file doesn't exist
+                logo_text = "💰 MARKILY"
+                story.append(Paragraph(f'<font size="24" color="#011C1C"><b>{logo_text}</b></font>', logo_style))
+                story.append(Spacer(1, 10))
+            
+            # Title
+            title = t(user_id, 'pdf_title') if lang == 'ar' else "Transaction Statement"
+            story.append(Paragraph(title, title_style))
+            
+            # Subtitle  
+            subtitle = t(user_id, 'pdf_subtitle') if lang == 'ar' else "Debt & Payment Record"
+            story.append(Paragraph(subtitle, subtitle_style))
+            
+            # Divider line
+            story.append(Spacer(1, 5))
+            story.append(Paragraph('<hr width="100%" color="#5AD25B"/>', styles['Normal']))
+            story.append(Spacer(1, 15))
+            
+            # Contact information
+            contact_label = "جهة الاتصال:" if is_arabic else "Contact:"
+            story.append(Paragraph(f'<b>{contact_label}</b> {contact_name}', info_style))
+            
+            # Date range
+            if history:
+                first_date = datetime.fromisoformat(history[-1][4]).strftime("%Y/%m/%d")
+                last_date = datetime.fromisoformat(history[0][4]).strftime("%Y/%m/%d") 
+                date_label = "الفترة:" if is_arabic else "Period:"
+                story.append(Paragraph(f'<b>{date_label}</b> {first_date} - {last_date}', info_style))
+            
+            # Generated date
+            generated_label = "تاريخ الإنشاء:" if is_arabic else "Generated:"
+            story.append(Paragraph(f'<b>{generated_label}</b> {datetime.now().strftime("%Y/%m/%d %H:%M")}', info_style))
+            
+            story.append(Spacer(1, 20))
+            
+            # Transaction table header
+            transactions_label = "سجل المعاملات" if is_arabic else "Transaction History"
+            story.append(Paragraph(transactions_label, header_style))
+            
+            # Simple table data
+            if is_arabic:
+                headers = ["الرصيد", "المبلغ", "الوصف", "التاريخ"]
+            else:
+                headers = ["Date", "Description", "Amount", "Balance"]
+                
+            data = [headers]
+            
+            # Calculate running balance
+            running_balance = 0.0
+            total_lent = 0.0
+            total_borrowed = 0.0
+            
+            # Process transactions chronologically
+            for amount, currency, transaction_type, note, created_at in reversed(history):
+                date_str = datetime.fromisoformat(created_at).strftime("%m/%d")
+                
+                # Calculate balance and description
+                if transaction_type == 'lent':
+                    running_balance += amount
+                    total_lent += amount
+                    if is_arabic:
+                        desc = f"أقرضت {amount:,.0f}"
+                    else:
+                        desc = f"Lent {amount:,.0f}"
+                    amount_display = f"+{amount:,.0f}"
+                else:  # borrowed
+                    running_balance -= amount  
+                    total_borrowed += amount
+                    if is_arabic:
+                        desc = f"استدنت {amount:,.0f}"
+                    else:
+                        desc = f"Borrowed {amount:,.0f}"
+                    amount_display = f"-{amount:,.0f}"
+                
+                # Add note if available
+                if note:
+                    desc += f" ({note})"
+                
+                # Format balance
+                if running_balance > 0:
+                    balance_str = f"+{running_balance:,.0f}"
+                elif running_balance < 0:
+                    balance_str = f"{running_balance:,.0f}"
+                else:
+                    balance_str = "0"
+                
+                if is_arabic:
+                    row = [balance_str, amount_display, desc, date_str]
+                else:
+                    row = [date_str, desc, amount_display, balance_str]
+                    
+                data.append(row)
+            
+            # Create simplified table
+            table = Table(data, colWidths=[2*cm, 6*cm, 3*cm, 2.5*cm])
+            table.setStyle(TableStyle([
+                # Header styling
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#5AD25B')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#011C1C')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                
+                # Data styling
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8f9fa')]),
+                
+                # Alignment
+                ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Date column
+                ('ALIGN', (1, 1), (1, -1), alignment), # Description 
+                ('ALIGN', (2, 1), (2, -1), 'RIGHT'),   # Amount
+                ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Balance
+            ]))
+            
+            story.append(table)
+            story.append(Spacer(1, 25))
+            
+            # Summary section
+            summary_label = "الملخص" if is_arabic else "Summary"
+            story.append(Paragraph(summary_label, header_style))
+            
+            # Summary box with background
+            summary_data = []
+            
+            if is_arabic:
+                summary_data.append([f"إجمالي المُقرض: {total_lent:,.0f} دج"])
+                summary_data.append([f"إجمالي المُستدان: {total_borrowed:,.0f} دج"])
+            else:
+                summary_data.append([f"Total Lent: {total_lent:,.0f} DZD"])
+                summary_data.append([f"Total Borrowed: {total_borrowed:,.0f} DZD"])
+            
+            # Final balance with color coding
+            final_balance = running_balance
+            if final_balance > 0:
+                if is_arabic:
+                    balance_text = f"الرصيد النهائي: +{final_balance:,.0f} دج (مدين لك)"
+                else:
+                    balance_text = f"Final Balance: +{final_balance:,.0f} DZD (Owes you)"
+                balance_color = colors.green
+            elif final_balance < 0:
+                if is_arabic:
+                    balance_text = f"الرصيد النهائي: {final_balance:,.0f} دج (مدين عليك)"  
+                else:
+                    balance_text = f"Final Balance: {final_balance:,.0f} DZD (You owe)"
+                balance_color = colors.red
+            else:
+                if is_arabic:
+                    balance_text = f"الرصيد النهائي: 0 دج (متصالح)"
+                else:
+                    balance_text = f"Final Balance: 0 DZD (Settled)"
+                balance_color = colors.blue
+                
+            summary_data.append([f'<font color="{balance_color.hexval()}"><b>{balance_text}</b></font>'])
+            
+            # Summary table
+            summary_table = Table(summary_data, colWidths=[12*cm])
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 0), (-1, -1), 11),
+                ('ALIGN', (0, 0), (-1, -1), alignment),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#5AD25B')),
+                ('LEFTPADDING', (0, 0), (-1, -1), 15),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ]))
+            
+            story.append(summary_table)
+            story.append(Spacer(1, 30))
+            
+            # Footer
+            footer_text = f"تم الإنشاء بواسطة Markily • {datetime.now().strftime('%Y/%m/%d')}" if is_arabic else f"Generated by Markily • {datetime.now().strftime('%Y/%m/%d')}"
+            footer_style = ParagraphStyle(
+                'FooterStyle', fontSize=8, fontName='Helvetica',
+                alignment=TA_CENTER, textColor=colors.HexColor('#999999')
+            )
+            story.append(Paragraph(footer_text, footer_style))
+            
+            # Build PDF
+            doc.build(story)
+            buffer.seek(0)
+            return buffer.getvalue()
+            
+        except Exception as e:
+            logger.error(f"Error generating PDF: {e}")
+            return None
     
     def generate_pdf_report(self, user_id: int, contact_id: int, chat_id: int, user_name: str = "User") -> Optional[bytes]:
         """Generate PDF report for transaction history with a contact"""
