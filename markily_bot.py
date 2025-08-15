@@ -1944,7 +1944,7 @@ async def start_set_reminder(update: Update, context: ContextTypes.DEFAULT_TYPE)
     chat_id = query.message.chat.id
     
     # Get user's contacts
-    contacts = bot.get_contacts(user_id, chat_id)
+    contacts = bot.get_user_contacts(user_id, chat_id)
     
     if not contacts:
         keyboard = [
