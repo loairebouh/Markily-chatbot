@@ -708,6 +708,9 @@ class MarkilyBot:
             alignment = TA_RIGHT if is_arabic else TA_LEFT
             title_alignment = TA_CENTER
             
+            # Table alignment strings (ReportLab tables need string alignment)
+            table_alignment = 'RIGHT' if is_arabic else 'LEFT'
+            
             # Custom styles
             logo_style = ParagraphStyle('LogoStyle', alignment=TA_CENTER, spaceAfter=20)
             
@@ -880,7 +883,7 @@ class MarkilyBot:
                 
                 # Alignment
                 ('ALIGN', (0, 1), (0, -1), 'CENTER'),  # Date column
-                ('ALIGN', (1, 1), (1, -1), alignment), # Description 
+                ('ALIGN', (1, 1), (1, -1), table_alignment), # Description 
                 ('ALIGN', (2, 1), (2, -1), 'RIGHT'),   # Amount
                 ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Balance
             ]))
@@ -931,7 +934,7 @@ class MarkilyBot:
                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
                 ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
                 ('FONTSIZE', (0, 0), (-1, -1), 11),
-                ('ALIGN', (0, 0), (-1, -1), alignment),
+                ('ALIGN', (0, 0), (-1, -1), table_alignment),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#5AD25B')),
                 ('LEFTPADDING', (0, 0), (-1, -1), 15),
