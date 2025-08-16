@@ -694,6 +694,40 @@ class MarkilyBot:
             contact_name = contact[1]
             lang = get_user_language(user_id)
             
+            # Register Arabic font for proper text rendering
+            try:
+                # Try to register a system font that supports Arabic
+                # On most systems, Arial Unicode MS or similar fonts support Arabic
+                from reportlab.pdfbase import pdfmetrics
+                from reportlab.pdfbase.ttfonts import TTFont
+                
+                # Try common system fonts that support Arabic
+                arabic_font_candidates = [
+                    '/System/Library/Fonts/Arial Unicode.ttf',  # macOS
+                    '/System/Library/Fonts/Helvetica.ttc',     # macOS fallback
+                    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # Linux
+                    'C:\\Windows\\Fonts\\arial.ttf',           # Windows
+                ]
+                
+                arabic_font_registered = False
+                for font_path in arabic_font_candidates:
+                    if os.path.exists(font_path):
+                        try:
+                            pdfmetrics.registerFont(TTFont('ArabicFont', font_path))
+                            arabic_font_registered = True
+                            logger.info(f"Registered Arabic font from {font_path}")
+                            break
+                        except Exception as font_error:
+                            logger.warning(f"Failed to register font {font_path}: {font_error}")
+                            continue
+                            
+                if not arabic_font_registered:
+                    logger.warning("No Arabic font found, falling back to Helvetica")
+                    
+            except Exception as font_setup_error:
+                logger.warning(f"Arabic font setup failed: {font_setup_error}")
+                arabic_font_registered = False
+            
             # Create PDF in memory
             buffer = io.BytesIO()
             doc = SimpleDocTemplate(buffer, pagesize=A4, 
@@ -711,28 +745,36 @@ class MarkilyBot:
             # Table alignment strings (ReportLab tables need string alignment)
             table_alignment = 'RIGHT' if is_arabic else 'LEFT'
             
+            # Font selection based on Arabic support
+            if is_arabic and arabic_font_registered:
+                base_font = 'ArabicFont'
+                bold_font = 'ArabicFont'  # Arabic font doesn't have bold variant
+            else:
+                base_font = 'Helvetica'
+                bold_font = 'Helvetica-Bold'
+            
             # Custom styles
             logo_style = ParagraphStyle('LogoStyle', alignment=TA_CENTER, spaceAfter=20)
             
             title_style = ParagraphStyle(
-                'TitleStyle', fontSize=20, fontName='Helvetica-Bold',
+                'TitleStyle', fontSize=20, fontName=bold_font,
                 alignment=title_alignment, spaceAfter=15,
                 textColor=colors.HexColor('#011C1C')
             )
             
             subtitle_style = ParagraphStyle(
-                'SubtitleStyle', fontSize=14, fontName='Helvetica',
+                'SubtitleStyle', fontSize=14, fontName=base_font,
                 alignment=title_alignment, spaceAfter=20,
                 textColor=colors.HexColor('#666666')
             )
             
             info_style = ParagraphStyle(
-                'InfoStyle', fontSize=11, fontName='Helvetica',
+                'InfoStyle', fontSize=11, fontName=base_font,
                 alignment=alignment, spaceAfter=8
             )
             
             header_style = ParagraphStyle(
-                'HeaderStyle', fontSize=12, fontName='Helvetica-Bold',
+                'HeaderStyle', fontSize=12, fontName=bold_font,
                 alignment=alignment, spaceAfter=15,
                 textColor=colors.HexColor('#011C1C')
             )
@@ -741,14 +783,16 @@ class MarkilyBot:
             story = []
             
             # Add Markily Logo from file
-            logo_path = "./logo.png"
+            logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png")
             try:
                 if os.path.exists(logo_path):
                     logo = Image(logo_path, width=4*cm, height=2*cm)
                     logo.hAlign = 'CENTER'
                     story.append(logo)
                     story.append(Spacer(1, 15))
+                    logger.info(f"Logo loaded successfully from {logo_path}")
                 else:
+                    logger.warning(f"Logo file not found at {logo_path}")
                     # Fallback to text logo if file doesn't exist
                     logo_text = "💰 MARKILY"
                     story.append(Paragraph(f'<font size="24" color="#011C1C"><b>{logo_text}</b></font>', logo_style))
@@ -870,12 +914,12 @@ class MarkilyBot:
                 # Header styling
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#5AD25B')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#011C1C')),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTNAME', (0, 0), (-1, 0), bold_font),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
                 
                 # Data styling
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTNAME', (0, 1), (-1, -1), base_font),
                 ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -905,7 +949,7 @@ class MarkilyBot:
                 summary_data.append([f"Total Lent: {total_lent:,.0f} DZD"])
                 summary_data.append([f"Total Borrowed: {total_borrowed:,.0f} DZD"])
             
-            # Final balance with color coding
+            # Final balance with color coding - use plain text without HTML
             final_balance = running_balance
             if final_balance > 0:
                 if is_arabic:
@@ -926,13 +970,14 @@ class MarkilyBot:
                     balance_text = f"Final Balance: 0 DZD (Settled)"
                 balance_color = colors.blue
                 
-            summary_data.append([f'<font color="{balance_color.hexval()}"><b>{balance_text}</b></font>'])
+            # Add balance text without HTML formatting
+            summary_data.append([balance_text])
             
             # Summary table
             summary_table = Table(summary_data, colWidths=[12*cm])
             summary_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8f9fa')),
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+                ('FONTNAME', (0, 0), (-1, -1), base_font),
                 ('FONTSIZE', (0, 0), (-1, -1), 11),
                 ('ALIGN', (0, 0), (-1, -1), table_alignment),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -941,6 +986,9 @@ class MarkilyBot:
                 ('RIGHTPADDING', (0, 0), (-1, -1), 15),
                 ('TOPPADDING', (0, 0), (-1, -1), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                # Color the balance row based on final balance
+                ('TEXTCOLOR', (0, -1), (-1, -1), balance_color),
+                ('FONTNAME', (0, -1), (-1, -1), bold_font),  # Make balance text bold
             ]))
             
             story.append(summary_table)
