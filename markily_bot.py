@@ -1743,10 +1743,40 @@ async def export_pdf_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_name = query.from_user.first_name or "User"
             welcome_text = t(user_id, 'welcome', user_name)
             
-            # Show error message indicating no transaction history
-            no_history_msg = "❌ No transaction history found with this contact. Add some transactions first!" if get_user_language(user_id) == 'en' else "❌ لا يوجد تاريخ معاملات مع جهة الاتصال هذه. أضف بعض المعاملات أولاً!"
-            error_text = no_history_msg + "\n\n" + welcome_text
-            await query.edit_message_text(error_text, reply_markup=reply_markup, parse_mode='Markdown')
+            # Show error message indicating no transaction history with helpful guidance
+            if get_user_language(user_id) == 'en':
+                no_history_msg = f"📋 **No Transaction History**\n\nYou don't have any transactions with **{contact_name}** yet.\n\n💡 **Get Started:**\n• Tap **Lent Money** if they owe you\n• Tap **Borrowed Money** if you owe them"
+            else:
+                no_history_msg = f"📋 **لا يوجد تاريخ معاملات**\n\nليس لديك أي معاملات مع **{contact_name}** حتى الآن.\n\n💡 **ابدأ الآن:**\n• اضغط **أقرضت مالاً** إذا كان مديناً لك\n• اضغط **استدنت مالاً** إذا كنت مديناً له"
+            
+            # Create quick action keyboard with highlighted lend/borrow buttons
+            keyboard = [
+                [
+                    InlineKeyboardButton(f"💸 {t(user_id, 'lent_money')}", callback_data="action_lend"),
+                    InlineKeyboardButton(f"💰 {t(user_id, 'borrowed_money')}", callback_data="action_borrow")
+                ],
+                [InlineKeyboardButton("──────────", callback_data="separator")],  # Visual separator
+                [
+                    InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
+                    InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
+                    InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
+                    InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
+                    InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # Show the helpful message with quick actions
+            await query.edit_message_text(no_history_msg, reply_markup=reply_markup, parse_mode='Markdown')
             
     except Exception as e:
         logger.error(f"Exception during PDF generation for user {user_id}, contact {contact_id}: {str(e)}")
@@ -2316,6 +2346,11 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "back_to_menu":
         await start(update, context)
         return ConversationHandler.END
+    
+    elif data == "separator":
+        # Just ignore separator clicks (decorative button)
+        await query.answer("⬆️ Quick Actions")
+        return
     
     elif data == "action_add_contact":
         return await start_add_contact(update, context)
