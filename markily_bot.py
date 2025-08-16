@@ -694,19 +694,37 @@ class MarkilyBot:
             contact_name = contact[1]
             lang = get_user_language(user_id)
             
+            # Arabic text processing function
+            def process_arabic_text(text):
+                """Process Arabic text for proper RTL display"""
+                if not text or lang != 'ar':
+                    return text
+                try:
+                    # Try to use python-bidi for proper RTL text handling
+                    try:
+                        from bidi.algorithm import get_display
+                        return get_display(text)
+                    except ImportError:
+                        # Fallback: Simple RTL processing
+                        # This is a basic approach - for production, install python-bidi
+                        logger.warning("python-bidi not installed, using basic RTL processing")
+                        return text
+                except Exception as e:
+                    logger.warning(f"Arabic text processing failed: {e}")
+                    return text
+            
             # Register Arabic font for proper text rendering
             try:
-                # Try to register a system font that supports Arabic
-                # On most systems, Arial Unicode MS or similar fonts support Arabic
                 from reportlab.pdfbase import pdfmetrics
                 from reportlab.pdfbase.ttfonts import TTFont
                 
                 # Try common system fonts that support Arabic
                 arabic_font_candidates = [
-                    '/System/Library/Fonts/Arial Unicode.ttf',  # macOS
-                    '/System/Library/Fonts/Helvetica.ttc',     # macOS fallback
+                    '/System/Library/Fonts/Arial.ttf',         # macOS
+                    '/System/Library/Fonts/Helvetica.ttc',    # macOS
                     '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',  # Linux
-                    'C:\\Windows\\Fonts\\arial.ttf',           # Windows
+                    'C:\\Windows\\Fonts\\arial.ttf',          # Windows
+                    '/System/Library/Fonts/Arial Unicode.ttf', # macOS Unicode
                 ]
                 
                 arabic_font_registered = False
@@ -807,8 +825,8 @@ class MarkilyBot:
             # Title - use safe translation approach
             try:
                 if is_arabic:
-                    title = t(user_id, 'pdf_title')
-                    subtitle = t(user_id, 'pdf_subtitle') 
+                    title = process_arabic_text(t(user_id, 'pdf_title'))
+                    subtitle = process_arabic_text(t(user_id, 'pdf_subtitle')) 
                 else:
                     title = "Transaction Statement"
                     subtitle = "Debt & Payment Record"
@@ -826,32 +844,38 @@ class MarkilyBot:
             story.append(Spacer(1, 15))
             
             # Contact information
-            contact_label = "جهة الاتصال:" if is_arabic else "Contact:"
-            story.append(Paragraph(f'<b>{contact_label}</b> {contact_name}', info_style))
+            contact_label = process_arabic_text("جهة الاتصال:") if is_arabic else "Contact:"
+            contact_name_processed = process_arabic_text(contact_name) if is_arabic else contact_name
+            story.append(Paragraph(f'<b>{contact_label}</b> {contact_name_processed}', info_style))
             
             # Date range
             if history:
                 try:
                     first_date = datetime.fromisoformat(history[-1][4]).strftime("%Y/%m/%d")
                     last_date = datetime.fromisoformat(history[0][4]).strftime("%Y/%m/%d") 
-                    date_label = "الفترة:" if is_arabic else "Period:"
+                    date_label = process_arabic_text("الفترة:") if is_arabic else "Period:"
                     story.append(Paragraph(f'<b>{date_label}</b> {first_date} - {last_date}', info_style))
                 except Exception as date_error:
                     logger.warning(f"Date formatting error: {date_error}")
             
             # Generated date
-            generated_label = "تاريخ الإنشاء:" if is_arabic else "Generated:"
+            generated_label = process_arabic_text("تاريخ الإنشاء:") if is_arabic else "Generated:"
             story.append(Paragraph(f'<b>{generated_label}</b> {datetime.now().strftime("%Y/%m/%d %H:%M")}', info_style))
             
             story.append(Spacer(1, 20))
             
             # Transaction table header
-            transactions_label = "سجل المعاملات" if is_arabic else "Transaction History"
+            transactions_label = process_arabic_text("سجل المعاملات") if is_arabic else "Transaction History"
             story.append(Paragraph(transactions_label, header_style))
             
             # Simple table data
             if is_arabic:
-                headers = ["الرصيد", "المبلغ", "الوصف", "التاريخ"]
+                headers = [
+                    process_arabic_text("الرصيد"), 
+                    process_arabic_text("المبلغ"), 
+                    process_arabic_text("الوصف"), 
+                    process_arabic_text("التاريخ")
+                ]
             else:
                 headers = ["Date", "Description", "Amount", "Balance"]
                 
@@ -872,7 +896,7 @@ class MarkilyBot:
                         running_balance += amount
                         total_lent += amount
                         if is_arabic:
-                            desc = f"أقرضت {amount:,.0f}"
+                            desc = process_arabic_text(f"أقرضت {amount:,.0f}")
                         else:
                             desc = f"Lent {amount:,.0f}"
                         amount_display = f"+{amount:,.0f}"
@@ -880,14 +904,15 @@ class MarkilyBot:
                         running_balance -= amount  
                         total_borrowed += amount
                         if is_arabic:
-                            desc = f"استدنت {amount:,.0f}"
+                            desc = process_arabic_text(f"استدنت {amount:,.0f}")
                         else:
                             desc = f"Borrowed {amount:,.0f}"
                         amount_display = f"-{amount:,.0f}"
                     
                     # Add note if available
                     if note:
-                        desc += f" ({note})"
+                        note_processed = process_arabic_text(note) if is_arabic else note
+                        desc += f" ({note_processed})"
                     
                     # Format balance
                     if running_balance > 0:
@@ -936,15 +961,15 @@ class MarkilyBot:
             story.append(Spacer(1, 25))
             
             # Summary section
-            summary_label = "الملخص" if is_arabic else "Summary"
+            summary_label = process_arabic_text("الملخص") if is_arabic else "Summary"
             story.append(Paragraph(summary_label, header_style))
             
             # Summary box with background
             summary_data = []
             
             if is_arabic:
-                summary_data.append([f"إجمالي المُقرض: {total_lent:,.0f} دج"])
-                summary_data.append([f"إجمالي المُستدان: {total_borrowed:,.0f} دج"])
+                summary_data.append([process_arabic_text(f"إجمالي المُقرض: {total_lent:,.0f} دج")])
+                summary_data.append([process_arabic_text(f"إجمالي المُستدان: {total_borrowed:,.0f} دج")])
             else:
                 summary_data.append([f"Total Lent: {total_lent:,.0f} DZD"])
                 summary_data.append([f"Total Borrowed: {total_borrowed:,.0f} DZD"])
@@ -953,19 +978,19 @@ class MarkilyBot:
             final_balance = running_balance
             if final_balance > 0:
                 if is_arabic:
-                    balance_text = f"الرصيد النهائي: +{final_balance:,.0f} دج (مدين لك)"
+                    balance_text = process_arabic_text(f"الرصيد النهائي: +{final_balance:,.0f} دج (مدين لك)")
                 else:
                     balance_text = f"Final Balance: +{final_balance:,.0f} DZD (Owes you)"
                 balance_color = colors.green
             elif final_balance < 0:
                 if is_arabic:
-                    balance_text = f"الرصيد النهائي: {final_balance:,.0f} دج (مدين عليك)"  
+                    balance_text = process_arabic_text(f"الرصيد النهائي: {final_balance:,.0f} دج (مدين عليك)")  
                 else:
                     balance_text = f"Final Balance: {final_balance:,.0f} DZD (You owe)"
                 balance_color = colors.red
             else:
                 if is_arabic:
-                    balance_text = f"الرصيد النهائي: 0 دج (متصالح)"
+                    balance_text = process_arabic_text(f"الرصيد النهائي: 0 دج (متصالح)")
                 else:
                     balance_text = f"Final Balance: 0 DZD (Settled)"
                 balance_color = colors.blue
@@ -995,9 +1020,13 @@ class MarkilyBot:
             story.append(Spacer(1, 30))
             
             # Footer
-            footer_text = f"تم الإنشاء بواسطة Markily • {datetime.now().strftime('%Y/%m/%d')}" if is_arabic else f"Generated by Markily • {datetime.now().strftime('%Y/%m/%d')}"
+            if is_arabic:
+                footer_text = process_arabic_text(f"تم الإنشاء بواسطة Markily • {datetime.now().strftime('%Y/%m/%d')}")
+            else:
+                footer_text = f"Generated by Markily • {datetime.now().strftime('%Y/%m/%d')}"
+            
             footer_style = ParagraphStyle(
-                'FooterStyle', fontSize=8, fontName='Helvetica',
+                'FooterStyle', fontSize=8, fontName=base_font,
                 alignment=TA_CENTER, textColor=colors.HexColor('#999999')
             )
             story.append(Paragraph(footer_text, footer_style))
