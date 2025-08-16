@@ -1755,7 +1755,6 @@ async def export_pdf_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     InlineKeyboardButton(f"💸 {t(user_id, 'lent_money')}", callback_data="action_lend"),
                     InlineKeyboardButton(f"💰 {t(user_id, 'borrowed_money')}", callback_data="action_borrow")
                 ],
-                [InlineKeyboardButton("──────────", callback_data="separator")],  # Visual separator
                 [
                     InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
                     InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
@@ -2346,11 +2345,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "back_to_menu":
         await start(update, context)
         return ConversationHandler.END
-    
-    elif data == "separator":
-        # Just ignore separator clicks (decorative button)
-        await query.answer("⬆️ Quick Actions")
-        return
     
     elif data == "action_add_contact":
         return await start_add_contact(update, context)
