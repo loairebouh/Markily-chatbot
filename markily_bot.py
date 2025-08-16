@@ -674,6 +674,11 @@ class MarkilyBot:
     def generate_pdf_report(self, user_id: int, contact_id: int, chat_id: int, user_name: str = "User") -> Optional[bytes]:
         """Generate simplified PDF report with Arabic support and Markily logo"""
         try:
+            logger.info(f"Starting PDF generation for user {user_id}, contact {contact_id}, chat {chat_id}")
+            
+            # Ensure database is properly initialized
+            self.init_database(chat_id)
+            
             # Get transaction history and contact info
             history = self.get_transaction_history(user_id, contact_id, chat_id)
             if not history:
@@ -1650,29 +1655,104 @@ async def export_pdf_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Show generating message
     await query.edit_message_text(t(user_id, 'generating_pdf'))
     
-    # Generate PDF
+    # Generate PDF with better error handling
     user_name = query.from_user.first_name or "User"
-    pdf_bytes = bot.generate_pdf_report(user_id, contact_id, chat_id, user_name)
     
-    if pdf_bytes:
-        # Create filename
-        safe_contact_name = "".join(c for c in contact_name if c.isalnum() or c in (' ', '-', '_')).strip()
-        filename = f"transaction_history_{safe_contact_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+    try:
+        pdf_bytes = bot.generate_pdf_report(user_id, contact_id, chat_id, user_name)
         
-        # Send PDF file
-        pdf_file = io.BytesIO(pdf_bytes)
-        pdf_file.name = filename
+        if pdf_bytes:
+            # Create filename
+            safe_contact_name = "".join(c for c in contact_name if c.isalnum() or c in (' ', '-', '_')).strip()
+            filename = f"transaction_history_{safe_contact_name}_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+            
+            # Send PDF file
+            pdf_file = io.BytesIO(pdf_bytes)
+            pdf_file.name = filename
+            
+            success_message = t(user_id, 'pdf_generated', contact_name, datetime.now().strftime('%Y-%m-%d %H:%M'))
+            
+            await query.message.reply_document(
+                document=pdf_file,
+                filename=filename,
+                caption=success_message,
+                parse_mode='Markdown'
+            )
+            
+            # Show main menu again after PDF generation
+            keyboard = [
+                [
+                    InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
+                    InlineKeyboardButton(t(user_id, 'borrowed_money'), callback_data="action_borrow")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
+                    InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
+                    InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
+                    InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
+                    InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # Get user's first name for welcome message
+            user_name = query.from_user.first_name or "User"
+            welcome_text = t(user_id, 'welcome', user_name)
+            
+            await query.edit_message_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+            
+        else:
+            # PDF generation returned None - likely no transaction history
+            logger.error(f"PDF generation returned None for user {user_id}, contact {contact_id}")
+            
+            # Show main menu with error message
+            keyboard = [
+                [
+                    InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
+                    InlineKeyboardButton(t(user_id, 'borrowed_money'), callback_data="action_borrow")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
+                    InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
+                    InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
+                    InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
+                ],
+                [
+                    InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
+                    InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # Get user's first name for welcome message
+            user_name = query.from_user.first_name or "User"
+            welcome_text = t(user_id, 'welcome', user_name)
+            
+            # Show error message indicating no transaction history
+            no_history_msg = "❌ No transaction history found with this contact. Add some transactions first!" if get_user_language(user_id) == 'en' else "❌ لا يوجد تاريخ معاملات مع جهة الاتصال هذه. أضف بعض المعاملات أولاً!"
+            error_text = no_history_msg + "\n\n" + welcome_text
+            await query.edit_message_text(error_text, reply_markup=reply_markup, parse_mode='Markdown')
+            
+    except Exception as e:
+        logger.error(f"Exception during PDF generation for user {user_id}, contact {contact_id}: {str(e)}")
+        logger.error(f"Traceback: ", exc_info=True)
         
-        success_message = t(user_id, 'pdf_generated', contact_name, datetime.now().strftime('%Y-%m-%d %H:%M'))
-        
-        await query.message.reply_document(
-            document=pdf_file,
-            filename=filename,
-            caption=success_message,
-            parse_mode='Markdown'
-        )
-        
-        # Show main menu again after PDF generation
+        # Show main menu with error message
         keyboard = [
             [
                 InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
@@ -1701,40 +1781,8 @@ async def export_pdf_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_name = query.from_user.first_name or "User"
         welcome_text = t(user_id, 'welcome', user_name)
         
-        await query.edit_message_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
-        
-    else:
-        # Error generating PDF - show main menu
-        keyboard = [
-            [
-                InlineKeyboardButton(t(user_id, 'lent_money'), callback_data="action_lend"),
-                InlineKeyboardButton(t(user_id, 'borrowed_money'), callback_data="action_borrow")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'add_contact'), callback_data="action_add_contact"),
-                InlineKeyboardButton(t(user_id, 'view_balances'), callback_data="action_balances")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'transaction_history'), callback_data="action_history"),
-                InlineKeyboardButton(t(user_id, 'clear_balance'), callback_data="action_clear")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'set_reminder'), callback_data="action_set_reminder"),
-                InlineKeyboardButton(t(user_id, 'view_reminders'), callback_data="action_view_reminders")
-            ],
-            [
-                InlineKeyboardButton(t(user_id, 'delete_contact'), callback_data="action_delete_contact"),
-                InlineKeyboardButton(t(user_id, 'language'), callback_data="action_language")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        # Get user's first name for welcome message
-        user_name = query.from_user.first_name or "User"
-        welcome_text = t(user_id, 'welcome', user_name)
-        
-        # Show error message first, then welcome message
-        error_text = t(user_id, 'pdf_error') + "\n\n" + welcome_text
+        # Show error message with exception details
+        error_text = t(user_id, 'pdf_error') + f" (Error: {str(e)})" + "\n\n" + welcome_text
         await query.edit_message_text(error_text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def get_my_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
