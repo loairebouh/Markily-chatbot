@@ -1,0 +1,39 @@
+{
+  "name": "markily-telegram-chatbot",
+  "version": "1.0.0",
+  "description": "Advanced Telegram bot for managing lending and borrowing with contacts",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "start": "node dist/index.js",
+    "watch": "nodemon --exec ts-node src/index.ts",
+    "clean": "rm -rf dist",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src/**/*.ts"
+  },
+  "keywords": ["telegram", "bot", "lending", "borrowing", "finance", "typescript"],
+  "author": "Loai Rebouh",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.15.6",
+    "sqlite3": "^5.1.6",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.1",
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/parser": "^6.13.1",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "prettier": "^3.1.0"
+  }
+}
